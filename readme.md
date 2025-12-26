@@ -106,7 +106,26 @@ Gen 4: $1.25M.
 
 Gen 5 (Fusion): $100M.
 
-6. ENGINE VALIDATION PROTOCOLS (TESTING PLAN)
+7. SAVE SYSTEM 2.0 SPECIFICATION
+7.1 Persistence Strategy
+   - Storage: LocalStorage key `atomic-tycoon-save`.
+   - Frequency: Auto-save every 30 seconds and on `window.onbeforeunload`.
+   - Data Structure: JSON object including `cash`, `lastSaveTime`, `managers`, `buildings`, `reactors`, `upgrades`.
+
+7.2 Offline Progress
+   - Trigger: On load, if `Date.now() - lastSaveTime > 60000` (1 minute).
+   - Calculation:
+     - `deltaTime = Date.now() - state.lastSaveTime`
+     - `RevenueRate = (CityRevenue * Efficiency) + ReactorGrants + ExportIncome`
+     - `OfflineCash = RevenueRate * (deltaTime / 1000) * 0.50` (50% Efficiency Penalty).
+   - UX: Modal report showing absence duration and cash earned.
+
+7.3 Data Management
+   - Export: Base64 encoding of state JSON object to clipboard.
+   - Import: Base64 decoding with validation and state merging.
+   - Reset: Clear LocalStorage and reload page.
+
+8. ENGINE VALIDATION PROTOCOLS (TESTING PLAN)
 
 T1: Thermal Stress Test
 
