@@ -401,3 +401,20 @@ textarea.save-string {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
     animation: floatUp 4s ease-out forwards;
 }
+
+.u-coolant-btn {
+    text-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+}
+
+.u-coolant-btn:active {
+    transform: scale(0.98);
+}
+
+.coolant-flash {
+    animation: flash-cyan 0.3s ease-out;
+}
+
+@keyframes flash-cyan {
+    0% { background-color: #22d3ee; box-shadow: 0 0 20px #22d3ee; border-color: #fff; }
+    100% { background-color: transparent; box-shadow: none; }
+}

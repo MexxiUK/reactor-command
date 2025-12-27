@@ -313,6 +313,35 @@ function upgradeReactor(id) {
     }
 }
 
+function getCoolantCost(gen) {
+    const baseGrant = GEN_BASE_GRANT[gen] || 5;
+    return baseGrant * 20; // 20x Base Revenue of unit
+}
+
+function injectCoolant(id) {
+    const r = state.reactors.find(x => x.id === id);
+    if (!r || r.isScrammed) return;
+
+    const cost = getCoolantCost(r.gen);
+    if (state.cash >= cost) {
+        state.cash -= cost;
+        r.heat = Math.max(0, r.heat - 15); // -15% Heat
+
+        // Visual Feedback
+        const ui = document.querySelector('.reactor-unit[data-id="' + id + '"]');
+        if (ui) {
+            const btn = ui.querySelector('.u-coolant-btn');
+            btn.classList.add('coolant-flash');
+            setTimeout(() => btn.classList.remove('coolant-flash'), 300);
+
+            // Floating text for heat drop
+            const rect = btn.getBoundingClientRect();
+            spawnFloatingText(rect.left + 50, rect.top - 20, "-15% HEAT", "text-cyan-400 text-sm");
+        }
+        refreshStaticUI(); // Update cash display immediately
+    }
+}
+
 function renderReactors() {
     const grid = document.getElementById('reactor-grid');
     if (!grid) return;
@@ -338,6 +367,17 @@ function renderReactors() {
             upBtn.disabled = true;
         }
         else upBtn.onclick = () => upgradeReactor(r.id);
+
+        // Coolant Button Logic
+        const coolBtn = root.querySelector('.u-coolant-btn');
+        const coolCost = getCoolantCost(r.gen);
+        root.querySelector('.u-coolant-cost').innerText = formatNum(coolCost);
+
+        coolBtn.onclick = () => injectCoolant(r.id);
+        const canAffordCoolant = state.cash >= coolCost;
+        coolBtn.classList.toggle('opacity-50', !canAffordCoolant);
+        coolBtn.classList.toggle('cursor-not-allowed', !canAffordCoolant);
+        if (!canAffordCoolant) coolBtn.disabled = true;
 
         const ovrBtn = root.querySelector('.u-overdrive-btn');
         const startO = (e) => { e.preventDefault(); if (!state.masterOverdriveActive) r.isOverdrive = true; };
