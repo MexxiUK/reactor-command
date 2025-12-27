@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atomic Tycoon - Employee Handbook</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .crt-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        h1,
+        h2,
+        h3 {
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .section-card {
+            border: 1px solid #334155;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-radius: 0.5rem;
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .highlight {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+
+        .danger {
+            color: #ef4444;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body class="p-8 pb-20">
+    <div class="crt-overlay"></div>
+    <div class="max-w-4xl mx-auto z-10 relative">
+        <header class="text-center mb-12 border-b border-gray-700 pb-8">
+            <h1 class="text-4xl text-emerald-500 mb-2">Atomic Tycoon</h1>
+            <p class="text-sm text-gray-500 tracking-[0.2em]">OPERATOR SAFETY & OPERATIONS HANDBOOK v1.0</p>
+        </header>
+
+        <div class="section-card">
+            <h2 class="text-2xl text-blue-400 mb-4">1. Reactor Operations</h2>
+            <p class="mb-4">Your primary duty is the management of the fission reactor grid. Units generate revenue via
+                Energy Credits and power via MegaWatts (MW).</p>
+            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300">
+                <li><span class="highlight">Heat Management:</span> Reactors generate heat. If heat reaches 100%, the
+                    unit will <span class="danger">SCRAM</span> (emergency shutdown) to prevent meltdown. A SCRAMmed
+                    unit produces $0 and 0 MW until it cools.</li>
+                <li><span class="highlight">Overdrive:</span> You may manually override safety limits to boost output by
+                    250% (2.5x). Use with caution. Excessive Overdrive leads to rapid heat accumulation.</li>
+                <li><span class="highlight">Upgrades:</span> Reactors can be upgraded from Gen II to Gen V (Fusion).
+                    Higher generations are cleaner, more stable, and produce significantly more power.</li>
+            </ul>
+        </div>
+
+        <div class="section-card">
+            <h2 class="text-2xl text-yellow-500 mb-4">2. The Energy Market</h2>
+            <p class="mb-4">Energy prices fluctuate based on global demand and weather events.</p>
+            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300">
+                <li><span class="highlight">Stable:</span> Normal operations. Price multiplier ~1.0x.</li>
+                <li><span class="highlight">Bull Market:</span> High demand (Heatwaves, etc.). Prices surge (~2.0x).
+                    Capitalize on this with Overdrive.</li>
+                <li><span class="highlight">Bear Market:</span> Low demand. Prices drop (~0.5x). Good time for
+                    maintenance/upgrades.</li>
+                <li><span class="highlight">Volatility:</span> Erratic price spikes. High risk, high reward.</li>
+            </ul>
+        </div>
+
+        <div class="section-card">
+            <h2 class="text-2xl text-purple-400 mb-4">3. Personnel</h2>
+            <p class="mb-4">Hiring specialized staff provides passive bonuses to your entire grid. Staff costs increase
+                exponentially ($1k -> $25k -> $1M -> $25M).</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div class="p-3 border border-gray-700 rounded bg-gray-900">
+                    <h3 class="text-emerald-400 text-sm">Engineer</h3>
+                    <p class="text-xs text-gray-400 mt-1">+25% Power Output per staff.</p>
+                </div>
+                <div class="p-3 border border-gray-700 rounded bg-gray-900">
+                    <h3 class="text-purple-400 text-sm">Tax Consultant</h3>
+                    <p class="text-xs text-gray-400 mt-1">+25% City Revenue per staff.</p>
+                </div>
+                <div class="p-3 border border-gray-700 rounded bg-gray-900">
+                    <h3 class="text-red-400 text-sm">Safety Inspector</h3>
+                    <p class="text-xs text-gray-400 mt-1">-30% Heat Generation. Critical for Overdrive.</p>
+                </div>
+                <div class="p-3 border border-gray-700 rounded bg-gray-900">
+                    <h3 class="text-blue-400 text-sm">Procurement</h3>
+                    <p class="text-xs text-gray-400 mt-1">-10% Building/Unit Cost.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h2 class="text-2xl text-emerald-500 mb-4">4. Contracts</h2>
+            <p class="mb-4">Corporate offers special contracts for operators who demonstrate exceptional grid control.
+            </p>
+            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300">
+                <li><span class="highlight">Types:</span> Stability Tests (No Brownouts), Surge Tests (High Heat), and
+                    Export Rushes (High Export).</li>
+                <li><span class="highlight">Rewards:</span> Contracts award large cash lump sums and Corporate
+                    Reputation.</li>
+                <li><span class="highlight">Reputation:</span> Higher reputation unlocks more lucrative contracts.</li>
+            </ul>
+        </div>
+
+        <footer class="text-center text-xs text-gray-600 mt-12">
+            &copy; 2025 Atomic Energy Corp. Do not distribute.
+        </footer>
+    </div>
+</body>
+
+</html>
