@@ -726,9 +726,13 @@ function gameLoop() {
             } else r.heat = Math.max(0, r.heat - dt * 5);
             ui.classList.toggle('shake-light', r.heat > 50 && r.heat <= 75); ui.classList.toggle('shake-heavy', r.heat > 75);
         }
-        const m = r.isOverdrive ? 2.5 : 1, o = (r.isScrammed ? 0 : r.baseMW * m) * pM * maintM;
-        powerAvail += o;
+
         const tierIdx = (r.heat < 25 ? 0 : r.heat < 50 ? 1 : r.heat < 75 ? 2 : 3);
+        const bonusMW = (GEN_POWER_BONUS[r.gen] || [0, 0, 0, 0])[tierIdx];
+
+        const o = (r.isScrammed ? 0 : r.baseMW + bonusMW) * pM * maintM;
+        powerAvail += o;
+
         const zm = r.isScrammed ? 0 : (r.heat < 1 ? 1 : GEN_TIER_MULTIPLIERS[r.gen][tierIdx]);
         const unitRev = (GEN_BASE_GRANT[r.gen] || 5) * zm;
         unitRevTotal += unitRev;
@@ -766,8 +770,10 @@ function gameLoop() {
     let wm = 0;
     if (powerAvail > 0) state.reactors.forEach(r => {
         if (!r.isScrammed) {
-            const s = (r.baseMW * (r.isOverdrive ? 2.5 : 1) * pM * maintM) / powerAvail;
             const tierIdx = (r.heat < 25 ? 0 : r.heat < 50 ? 1 : r.heat < 75 ? 2 : 3);
+            const bonusMW = (GEN_POWER_BONUS[r.gen] || [0, 0, 0, 0])[tierIdx];
+            const s = ((r.baseMW + bonusMW) * pM * maintM) / powerAvail;
+
             wm += (r.heat < 1 ? 1 : GEN_TIER_MULTIPLIERS[r.gen][tierIdx]) * s;
         }
     });
