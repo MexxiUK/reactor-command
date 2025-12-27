@@ -391,6 +391,73 @@
             resize: none;
             margin: 1rem 0;
         }
+
+        .contract-card {
+            background: rgba(31, 41, 55, 0.4);
+            border: 1px solid #4b5563;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 180px;
+        }
+
+        .contract-card:hover {
+            border-color: #eab308;
+            background: rgba(31, 41, 55, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .contract-d-easy {
+            border-top: 2px solid #10b981;
+        }
+
+        .contract-d-med {
+            border-top: 2px solid #eab308;
+        }
+
+        .contract-d-hard {
+            border-top: 2px solid #ef4444;
+        }
+
+        @keyframes marquee {
+            0% {
+                transform: translateX(100%);
+            }
+
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+
+        .animate-marquee {
+            animation: marquee 10s linear infinite;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(-40px) scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        .floating-text {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            animation: floatUp 2s ease-out forwards;
+        }
     </style>
 </head>
 
@@ -413,10 +480,27 @@
                     Efficiency: 100%</div>
             </div>
             <div class="text-center">
-                <p class="text-[9px] uppercase text-gray-500 tracking-widest">Export Market</p>
-                <h2 class="text-2xl font-bold text-orange-400">$<span id="export-display">0</span><span
-                        class="text-sm">/s</span></h2>
-                <div class="text-[8px] text-gray-500 uppercase tracking-tighter">Selling Surplus MW</div>
+                <div class="flex flex-col items-center">
+                    <p class="text-[9px] uppercase text-gray-500 tracking-widest mb-1">Grid Market</p>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-2xl font-bold text-orange-400">$<span id="export-display">0</span><span
+                                class="text-sm">/s</span></h2>
+                        <div id="market-trend-arrow" class="text-xl font-bold text-gray-600">--</div>
+                    </div>
+                    <div class="text-[9px] uppercase tracking-tighter flex gap-3 mt-1">
+                        <span class="text-gray-500">Price: <span id="market-price"
+                                class="text-gray-300 font-bold">$0.10</span>/MW</span>
+                    </div>
+                    <!-- Sparkline Container -->
+                    <div class="w-24 h-6 bg-gray-900/50 mt-1 border border-gray-800 relative overflow-hidden flex items-end gap-[1px]"
+                        id="market-sparkline"></div>
+                    <!-- News Ticker -->
+                    <div class="w-48 overflow-hidden whitespace-nowrap mt-1 relative">
+                        <div id="market-news"
+                            class="text-[8px] text-gray-500 font-bold uppercase tracking-widest inline-block animate-marquee pl-48">
+                            Initializing...</div>
+                    </div>
+                </div>
             </div>
             <div class="text-center md:text-right">
                 <p class="text-[9px] uppercase text-gray-500 tracking-widest">Global Grid Load</p>
@@ -577,6 +661,45 @@
         </div>
     </div>
 
+    <!-- CONTRACTS MODAL -->
+    <div id="contracts-modal" class="modal-overlay">
+        <div class="modal-box border-yellow-500 max-w-[800px] w-full">
+            <span class="modal-close" onclick="toggleContractsModal()">[CLOSE]</span>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-yellow-500 uppercase tracking-widest">Available Contracts</h2>
+                <div class="text-xs text-gray-400 font-bold uppercase tracking-widest">Corp Rep: <span
+                        id="corp-rep-display" class="text-white">0</span></div>
+            </div>
+
+            <div id="contracts-list" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <!-- Contract Cards -->
+            </div>
+
+            <p class="text-[10px] text-gray-500 text-center font-bold uppercase tracking-widest">Warning: Failure to
+                meet contract terms may result in penalty.</p>
+        </div>
+    </div>
+
+    <!-- ACTIVE CONTRACT HUD -->
+    <div id="contract-hud"
+        class="hidden fixed top-24 right-4 w-64 bg-gray-900/90 border border-yellow-500/50 p-4 rounded shadow-lg z-40">
+        <div class="flex justify-between items-start mb-2">
+            <h4 class="text-[10px] font-bold text-yellow-500 uppercase tracking-tighter">Active Contract</h4>
+            <span id="contract-timer" class="text-sm font-bold text-white font-mono">00:00</span>
+        </div>
+        <div id="contract-title" class="text-xs font-bold text-white uppercase tracking-widest mb-3">Unknown</div>
+        <div class="space-y-2">
+            <div class="flex justify-between text-[10px] font-bold text-gray-400 uppercase">
+                <span>Progress</span>
+                <span id="contract-status-text">--/--</span>
+            </div>
+            <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                <div id="contract-progress-bar" class="bg-yellow-500 h-full w-0 transition-all duration-300"></div>
+            </div>
+            <p id="contract-desc-hud" class="text-[9px] text-gray-500 leading-tight mt-1"></p>
+        </div>
+    </div>
+
     <!-- DATA MODAL -->
     <div id="data-modal" class="modal-overlay">
         <div class="modal-box border-blue-500">
@@ -629,6 +752,8 @@
     </div>
 
     <div class="fixed bottom-4 right-4 z-[99] flex gap-2">
+        <button onclick="toggleContractsModal()" id="btn-contracts-open"
+            class="bg-yellow-900/20 border border-yellow-900 text-yellow-500 hover:bg-yellow-900/40 text-[8px] px-2 py-1 rounded uppercase tracking-widest font-bold">Contracts</button>
         <button onclick="toggleDataModal()"
             class="bg-blue-900/20 border border-blue-900 text-blue-400 hover:text-blue-300 hover:border-blue-500 text-[8px] px-2 py-1 rounded uppercase tracking-widest">Data
             / Save</button>
@@ -700,21 +825,31 @@
                 datacenter: { count: 0, baseCost: 2000000, demand: 200, revenue: 2500 },
                 skyscraper: { count: 0, baseCost: 50000000, demand: 1000, revenue: 25000 }
             },
-            reactors: [{ id: 1, gen: 2, heat: 0, isOverdrive: false, isScrammed: false, upgradeCost: 5000, baseMW: 30 }],
+            reactors: [{ id: 1, gen: 2, heat: 0, isOverdrive: false, isScrammed: false, upgradeCost: 5000, baseMW: 150 }],
             nextUnitCost: 5000,
-            managerCost: 1000,
             hasSync: false,
             hasFirefighters: false,
             hasSmartGrid: false,
             hasAI: false,
             hasLLM: false,
+            hasMaintenance: false,
             maxGenUnlocked: 2,
             masterOverdriveActive: false,
             ffMultiplier: 1,
             lastTickCash: 0,
             debugOpen: false,
             districtSize: 100,
-            landCost: 10000
+            landCost: 10000,
+            market: {
+                basePrice: 0.10,
+                multiplier: 1.0,
+                trend: [],
+                phase: 0,
+                state: 'STABLE', // STABLE, BULL, BEAR, HIGH_VOLATILITY
+                news: "Market Stable. Grid demand normal.",
+                timer: 0
+            },
+            contracts: { available: [], active: null, completed: 0, reputation: 0 }
         };
 
         const UPGRADES = [
@@ -771,6 +906,15 @@
                 isInstalled: (s) => s.hasLLM,
                 canBuy: (s) => s.hasAI,
                 action: () => { state.hasLLM = true; }
+            },
+            {
+                id: 'maintenance',
+                name: 'Maintenance Crews',
+                getLabel: () => 'Better maintenance crews allow for more efficient efficiency of reactor units. Grants +50% Max Output to all reactor cores.',
+                getCost: () => 750000,
+                isInstalled: (s) => s.hasMaintenance,
+                canBuy: () => true,
+                action: () => { state.hasMaintenance = true; }
             }
         ];
 
@@ -810,7 +954,15 @@
                     Object.keys(INITIAL_STATE.buildings).forEach(k => {
                         if (!state.buildings[k]) state.buildings[k] = INITIAL_STATE.buildings[k];
                     });
+                    if (!state.market) state.market = { ...INITIAL_STATE.market };
                     // Recalculate managers/reactors if needed (validation)
+
+                    // Validate Next Unit Cost for new scaling
+                    const rCount = state.reactors.length;
+                    if (rCount === 1) state.nextUnitCost = 5000;
+                    else if (rCount === 2) state.nextUnitCost = 500000;
+                    else if (rCount === 3) state.nextUnitCost = 50000000;
+
                     checkOfflineProgress();
                 } catch (e) { console.error("Save Corrupt", e); }
             }
@@ -830,6 +982,7 @@
                 const tC = state.managers.filter(m => m.type === 'tax').length;
                 const pM = 1 + (eC * 0.15);
                 const rM = 1 + (tC * 0.15);
+                const maintM = state.hasMaintenance ? 1.5 : 1.0;
 
                 const dcDemand = state.hasLLM ? 400 : (state.hasAI ? 600 : 200);
                 const dcRevenue = state.hasAI ? 5000 : 2500;
@@ -839,7 +992,7 @@
                 state.reactors.forEach(r => {
                     const genMult = GEN_STABILITY[r.gen] || 1.0; // Wait, stability is for heat. We need output.
                     // output = base * 1 * pM. (Assumes no overdrive offline)
-                    totalCap += r.baseMW * pM;
+                    totalCap += r.baseMW * pM * maintM;
                 });
 
                 const demand = (state.buildings.house.count * 1) + (state.buildings.factory.count * 25) +
@@ -854,7 +1007,7 @@
                 const reactorUnitRev = state.reactors.reduce((acc, r) => acc + (GEN_BASE_GRANT[r.gen] || 5), 0);
 
                 const surplus = Math.max(0, totalCap - demand);
-                const exportInc = surplus * 0.5;
+                const exportInc = surplus * 0.10;
 
                 const revPerSec = ((cityBase * eff) + reactorUnitRev) * rM + exportInc;
 
@@ -891,6 +1044,7 @@
 
         function hardReset() {
             if (confirm("Are you sure? This will wipe all progress.")) {
+                window.onbeforeunload = null;
                 localStorage.removeItem('atomic-tycoon-save');
                 location.reload();
             }
@@ -1050,6 +1204,27 @@
             btn.dataset.setup = "true";
         }
 
+        function getManagerCost(count) {
+            if (count === 0) return 1000;
+            if (count === 1) return 25000;
+            if (count === 2) return 1000000;
+            if (count === 3) return 25000000;
+            return 0; // Maxed
+        }
+
+        function addReactor() {
+            if (state.reactors.length < 4 && state.cash >= state.nextUnitCost) {
+                state.cash -= state.nextUnitCost;
+                state.reactors.push({ id: state.reactors.length + 1, gen: 2, heat: 0, isOverdrive: false, isScrammed: false, baseMW: 150 });
+
+                // New Cost Scaling: 5k -> 500k -> 50M
+                if (state.reactors.length === 2) state.nextUnitCost = 500000;
+                else if (state.reactors.length === 3) state.nextUnitCost = 50000000;
+
+                renderReactors(); refreshStaticUI();
+            }
+        }
+
         function buyBuilding(type) {
             const b = state.buildings[type];
             const pC = state.managers.filter(m => m.type === 'procurement').length;
@@ -1062,10 +1237,10 @@
         }
 
         function hireManager() {
-            if (state.managers.length >= 4 || state.cash < state.managerCost) return;
-            state.cash -= state.managerCost;
+            const cost = getManagerCost(state.managers.length);
+            if (state.managers.length >= 4 || state.cash < cost) return;
+            state.cash -= cost;
             state.managers.push({ id: Date.now(), type: 'engineer' });
-            state.managerCost = Math.floor(state.managerCost * 32);
             renderManagers(); refreshStaticUI();
         }
 
@@ -1103,7 +1278,8 @@
                         <div id="manager-bonus-${i}" class="text-[6px] text-gray-500 leading-tight uppercase font-bold tracking-tighter">${ct.bonus}</div>
                     `;
                 } else {
-                    slot.innerHTML = `<button onclick="hireManager()" id="hire-btn-${i}" class="w-full h-full flex flex-col items-center justify-center group transition-all"><span class="text-[9px] font-bold text-emerald-500 group-hover:text-emerald-400 uppercase">+ Hire</span><span class="text-[7px] text-gray-500 font-bold">$${formatNum(state.managerCost)}</span></button>`;
+                    const cost = getManagerCost(state.managers.length);
+                    slot.innerHTML = `<button onclick="hireManager()" id="hire-btn-${i}" class="w-full h-full flex flex-col items-center justify-center group transition-all"><span class="text-[9px] font-bold text-emerald-500 group-hover:text-emerald-400 uppercase">+ Hire</span><span class="text-[7px] text-gray-500 font-bold">$${formatNum(cost)}</span></button>`;
                     if (state.managers.length >= 4) slot.innerHTML = `<div class="w-full h-full flex items-center justify-center"><span class="text-[8px] text-gray-800 font-bold uppercase tracking-widest">Reserved</span></div>`;
                 }
                 container.appendChild(slot);
@@ -1115,23 +1291,33 @@
         function addReactor() {
             if (state.reactors.length < 4 && state.cash >= state.nextUnitCost) {
                 state.cash -= state.nextUnitCost;
-                state.reactors.push({ id: state.reactors.length + 1, gen: 2, heat: 0, isOverdrive: false, isScrammed: false, upgradeCost: 15000 * (state.reactors.length + 1), baseMW: 30 });
-                state.nextUnitCost *= 10;
+                state.reactors.push({ id: state.reactors.length + 1, gen: 2, heat: 0, isOverdrive: false, isScrammed: false, baseMW: 150 });
+
+                // New Cost Scaling: 5k -> 500k -> 50M
+                if (state.reactors.length === 2) state.nextUnitCost = 500000;
+                else if (state.reactors.length === 3) state.nextUnitCost = 50000000;
+
                 renderReactors(); refreshStaticUI();
             }
         }
 
+        function getUpgradeCost(gen) {
+            if (gen >= 5) return 0;
+            return 100000 * Math.pow(10, gen - 2);
+        }
+
         function upgradeReactor(id) {
             const r = state.reactors.find(x => x.id === id);
-            if (r && r.gen < state.maxGenUnlocked && state.cash >= r.upgradeCost) {
-                state.cash -= r.upgradeCost;
+            const cost = getUpgradeCost(r.gen);
+            if (r && r.gen < state.maxGenUnlocked && state.cash >= cost) {
+                state.cash -= cost;
                 r.gen++;
                 if (r.gen === 5) {
-                    r.baseMW = 1500;
+                    r.baseMW = 5000;
                 } else {
-                    r.baseMW *= 3.5;
+                    r.baseMW *= 3.0;
                 }
-                r.upgradeCost *= 10;
+                // Cost is now dynamic, no need to update r.upgradeCost
                 renderReactors(); refreshStaticUI();
             }
         }
@@ -1151,8 +1337,9 @@
                     genLabel = "FUSION";
                     root.querySelector('.u-gen').classList.add('text-cyan-400', 'border-cyan-900');
                 }
+                const cost = getUpgradeCost(r.gen);
                 root.querySelector('.u-gen').innerText = genLabel;
-                root.querySelector('.u-upgrade-cost').innerText = formatNum(r.upgradeCost);
+                root.querySelector('.u-upgrade-cost').innerText = formatNum(cost);
 
                 const upBtn = root.querySelector('.u-upgrade-btn');
                 if (r.gen >= state.maxGenUnlocked) {
@@ -1177,14 +1364,375 @@
             return Math.floor(num);
         }
 
+        function renderMarketSparkline() {
+            const el = document.getElementById('market-sparkline');
+            if (!el) return;
+            el.innerHTML = '';
+            // Render last 30 points
+            // Trend is variable length, take last 24
+            const data = state.market.trend.slice(-24);
+            if (data.length === 0) return;
+
+            const min = 0.5; // Fixed scale for stability
+            const max = 2.0;
+
+            data.forEach(val => {
+                const bar = document.createElement('div');
+                // Normalize height 0-100%
+                let h = ((val - min) / (max - min)) * 100;
+                if (h < 5) h = 5; if (h > 100) h = 100;
+
+                bar.style.height = h + '%';
+                bar.className = "w-1 " + (val >= 1.0 ? "bg-emerald-500" : "bg-red-500");
+                el.appendChild(bar);
+            });
+        }
+
+        // CONTRACTS SYSTEM
+        const CONTRACT_TYPES = [
+            {
+                id: 'surge',
+                title: 'Surge Test',
+                desc: 'Maintain Heat > 50% on all units.',
+                duration: 30,
+                difficulty: 'med',
+                rewardScale: 300, // Multiplier of base rev
+                check: (s) => s.reactors.every(r => r.heat >= 50 && !r.isScrammed),
+                fail: (s) => s.reactors.some(r => r.isScrammed)
+            },
+            {
+                id: 'stability',
+                title: 'Stability Audit',
+                desc: 'No Brownouts permitted.',
+                duration: 60,
+                difficulty: 'easy',
+                rewardScale: 100,
+                check: (s) => {
+                    const dcDemand = s.hasLLM ? 400 : (s.hasAI ? 600 : 200);
+                    const demand = (s.buildings.house.count * 1) + (s.buildings.factory.count * 25) + (s.buildings.datacenter.count * dcDemand) + (s.buildings.skyscraper.count * 1000);
+                    // Calc power
+                    const eC = s.managers.filter(m => m.type === 'engineer').length;
+                    const pM = 1 + (eC * 0.25);
+                    const maintM = s.hasMaintenance ? 1.5 : 1.0;
+                    let cap = 0;
+                    s.reactors.forEach(r => { if (!r.isScrammed) cap += r.baseMW * (r.isOverdrive ? 2.5 : 1) * pM * maintM; });
+                    return cap >= demand; // Pass if cap meets demand
+                },
+                fail: (s) => {
+                    // Keep Logic simple: if check returns false, we fail immediately? 
+                    // No, "check" is for "is condition currently met".
+                    // For stability, condition IS met if no brownout.
+                    // Failure is if Brownout occurs. So actually, check() should return true if safe.
+                    // If check() returns false, that's a fail.
+                    return false;
+                }
+            },
+            {
+                id: 'export',
+                title: 'Export Rush',
+                desc: 'Export > 50% of Total Gen.',
+                duration: 45,
+                difficulty: 'hard',
+                rewardScale: 500,
+                check: (s) => {
+                    const dcDemand = s.hasLLM ? 400 : (s.hasAI ? 600 : 200);
+                    const demand = (s.buildings.house.count * 1) + (s.buildings.factory.count * 25) + (s.buildings.datacenter.count * dcDemand) + (s.buildings.skyscraper.count * 1000);
+                    const eC = s.managers.filter(m => m.type === 'engineer').length;
+                    const pM = 1 + (eC * 0.25);
+                    const maintM = s.hasMaintenance ? 1.5 : 1.0;
+                    let cap = 0;
+                    s.reactors.forEach(r => { if (!r.isScrammed) cap += r.baseMW * (r.isOverdrive ? 2.5 : 1) * pM * maintM; });
+                    if (cap === 0) return false;
+                    return (cap - demand) > (cap * 0.5);
+                },
+                fail: (s) => false // No fail condition other than time running out?
+            }
+        ];
+
+        function generateContracts() {
+            state.contracts.available = [];
+            for (let i = 0; i < 3; i++) {
+                const type = CONTRACT_TYPES[Math.floor(Math.random() * CONTRACT_TYPES.length)];
+                // Create instance
+                const baseReward = Math.max(10000, state.income * type.rewardScale); // Scale with income
+                state.contracts.available.push({
+                    uid: Date.now() + i,
+                    typeId: type.id,
+                    title: type.title,
+                    desc: type.desc,
+                    duration: type.duration,
+                    difficulty: type.difficulty,
+                    reward: Math.floor(baseReward),
+                    tier: i // 0, 1, 2
+                });
+            }
+            renderContractsModal();
+        }
+
+        function toggleContractsModal() {
+            const m = document.getElementById('contracts-modal');
+            if (!m.classList.contains('open')) {
+                // If opening and empty, gen
+                if (state.contracts.available.length === 0) generateContracts();
+                renderContractsModal();
+            }
+            m.classList.toggle('open');
+        }
+
+        function renderContractsModal() {
+            const list = document.getElementById('contracts-list');
+            const rep = document.getElementById('corp-rep-display');
+            if (rep) rep.innerText = state.contracts.reputation;
+            if (!list) return;
+
+            list.innerHTML = '';
+            state.contracts.available.forEach(c => {
+                const el = document.createElement('div');
+                const diffColor = c.difficulty === 'easy' ? 'text-emerald-400' : (c.difficulty === 'med' ? 'text-yellow-400' : 'text-red-500');
+                const borderClass = 'contract-d-' + c.difficulty;
+
+                el.className = "contract-card " + borderClass;
+                el.onclick = () => acceptContract(c.uid);
+                el.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[9px] font-bold uppercase tracking-widest ${diffColor}">[${c.difficulty.toUpperCase()}]</span>
+                            <span class="text-[9px] font-bold text-gray-500">${c.duration}s</span>
+                        </div>
+                        <h3 class="text-sm font-bold text-gray-200 uppercase mb-1">${c.title}</h3>
+                        <p class="text-[10px] text-gray-400 leading-tight">${c.desc}</p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-700 flex justify-between items-end">
+                        <div class="text-[8px] uppercase text-gray-500 font-bold">Payout</div>
+                        <div class="text-lg font-bold text-emerald-400">$${formatNum(c.reward)}</div>
+                    </div>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        function acceptContract(uid) {
+            const c = state.contracts.available.find(x => x.uid === uid);
+            if (c) {
+                state.contracts.active = {
+                    ...c,
+                    timeLeft: c.duration,
+                    progress: 0
+                };
+                // Clear available so valid only once
+                state.contracts.available = [];
+                toggleContractsModal();
+                updateContractHUD();
+            }
+        }
+
+        function updateContractHUD() {
+            const hud = document.getElementById('contract-hud');
+            const c = state.contracts.active;
+            if (!c) {
+                hud.classList.add('hidden');
+                return;
+            }
+            hud.classList.remove('hidden');
+
+            document.getElementById('contract-title').innerText = c.title;
+            document.getElementById('contract-timer').innerText = c.timeLeft.toFixed(1) + 's';
+            // Status update handled in loop
+            document.getElementById('contract-desc-hud').innerText = c.desc;
+        }
+
+        function spawnFloatingText(x, y, text, colorClass) {
+            const el = document.createElement('div');
+            el.className = `floating-text ${colorClass} text-2xl`;
+            el.innerText = text;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+        }
+
+        function completeContract(success) {
+            const c = state.contracts.active;
+            state.contracts.active = null;
+            updateContractHUD();
+
+            const cashEl = document.getElementById('cash-display');
+            const rect = cashEl ? cashEl.getBoundingClientRect() : { left: window.innerWidth / 2, top: window.innerHeight / 2 };
+
+            if (success) {
+                state.cash += c.reward;
+                state.contracts.completed++;
+                state.contracts.reputation += (c.difficulty === 'hard' ? 5 : 1);
+
+                spawnFloatingText(rect.left + 20, rect.top, "+$" + formatNum(c.reward), "text-emerald-400");
+                spawnFloatingText(rect.left + 20, rect.top + 30, "CONTRACT COMPLETE", "text-yellow-400 text-sm");
+            } else {
+                spawnFloatingText(rect.left, rect.top, "CONTRACT FAILED", "text-red-500");
+            }
+            refreshStaticUI();
+        }
+
         function gameLoop() {
             const now = Date.now();
             const dt = ((now - lastTick) / 1000) * state.ffMultiplier;
             lastTick = now;
 
+            // Initialize Contracts State if missing
+            if (!state.contracts) state.contracts = { available: [], active: null, completed: 0, reputation: 0 };
+            // Calc income for ref
+            state.income = state.lastIncome || 100; // rough hack for gen
+
+            // CONTRACT LOGIC
+            if (state.contracts.active) {
+                const c = state.contracts.active;
+                const def = CONTRACT_TYPES.find(x => x.id === c.typeId);
+                const passed = def.check(state);
+
+                // Handling specific fail conditions
+                // Stability: fail if !passed (if brownout)
+                // Others: Just don't progress if !passed?
+
+                // Logic refinement:
+                // Surge: Must maintain. If you dip, maybe just pause progress? Or fail? The desc says "Maintain".
+                // Let's implement strict "Fail if condition broken" for Stability
+                // For Surge/Export, we track "Time Valid". 
+                // WAIT. "Maintained for duration". 
+                // Simple Mechanic: Timer decreases. If condition is met, great. If condition NOT met at end? Or must be met continuously?
+                // "Maintain per s" usually means "Accumulate Y seconds of good time" OR "Don't fail for Y seconds".
+                // Let's go with: Timer ticks down. If condition met, good. If condition NOT met, we might fail instantly (Stability) or just not count?
+                // Let's try: You must survive the duration. If you fail the check, instant Fail (for Stability/Surge).
+                // Actually Surge is hard to perfect. Let's make it: "Accumulate X seconds of coverage"?
+                // Re-reading proposal: "Maintain ... for 30s".
+
+                // Implementation:
+                // Timer always ticks down.
+                // Status is checked.
+                // If Stability && !passed -> Fail.
+                // If Surge && !passed -> Fail (Strict).
+                // If Export && !passed -> Fail (Strict).
+                // This makes them Hard. Good.
+
+                if (c.typeId === 'stability') {
+                    if (!passed) { completeContract(false); return; } // Brownout = Fail
+                } else {
+                    // For Surge/Export, if you dip below, fail?
+                    // Let's be slightly lenient for tick alignment, but strict is better game design.
+                    if (!passed) c.failTimer = (c.failTimer || 0) + dt;
+                    else c.failTimer = 0;
+
+                    if (c.failTimer > 2.0) { // Allow 2s grace? No, stricter.
+                        // completeContract(false); return; 
+                    }
+                    // Actually, let's make it Progress Bar based.
+                    // You need to FILL the bar to win? No, duration is fixed.
+                    // Okay, let's keep it simple: Timer counts down. You must meet condition when it hits 0?
+                    // No, "Maintain for 30s" implies continuous.
+
+                    // Revised Logic:
+                    // Timer counts down.
+                    // If condition !passed, Timer PAUSES? No.
+                    // If condition !passed, FAIL.
+                }
+
+                // Actually, let's simplify check logic to:
+                // Status text shows "OK" or "WARNING".
+                // If Condition met: Timer ticks down.
+                // If Condition NOT met: Timer pauses (and maybe red flashes).
+                // If you don't finish in (Duration * 2) real time, you fail?
+                // Let's stick to: Condition must be met to progress.
+                // We track "TimeSatisfied". Goal is Duration.
+                // We also track "TimeElapsed". If TimeElapsed > Duration * 1.5, Fail.
+
+                if (!c.timeSatisfied) c.timeSatisfied = 0;
+
+                if (passed) {
+                    c.timeSatisfied += dt;
+                    document.getElementById('contract-status-text').innerHTML = '<span class="text-emerald-500">CONDITION MET</span>';
+                    document.getElementById('contract-progress-bar').className = 'bg-emerald-500 h-full transition-all duration-300';
+                } else {
+                    document.getElementById('contract-status-text').innerHTML = '<span class="text-red-500">CONDITION FAILED</span>';
+                    document.getElementById('contract-progress-bar').className = 'bg-red-500 h-full transition-all duration-300';
+                    // Specific instant fails
+                    if (c.typeId === 'stability') { completeContract(false); return requestAnimationFrame(gameLoop); }
+                }
+
+                // Visual progress
+                const pct = (c.timeSatisfied / c.duration) * 100;
+                document.getElementById('contract-progress-bar').style.width = pct + '%';
+                document.getElementById('contract-timer').innerText = (c.duration - c.timeSatisfied).toFixed(1) + 's';
+
+                if (c.timeSatisfied >= c.duration) {
+                    completeContract(true);
+                    return requestAnimationFrame(gameLoop);
+                }
+            }
+
+            // MARKET LOGIC
+            // Ensure state exists if hot-loaded
+            if (!state.market) state.market = { basePrice: 0.10, multiplier: 1.0, trend: [], phase: 0, state: 'STABLE', news: 'Market Stable.', timer: 0 };
+
+            // Market Event System
+            if (!state.market.timer) state.market.timer = 0;
+            state.market.timer -= dt;
+            if (state.market.timer <= 0) {
+                // Pick new state
+                const r = Math.random();
+                let duration = 30 + Math.random() * 60; // 30s - 90s
+
+                if (r < 0.6) {
+                    state.market.state = 'STABLE';
+                    state.market.news = "Market Stable. Grid demand normal.";
+                } else if (r < 0.75) {
+                    state.market.state = 'BULL';
+                    state.market.news = "NEWS: Heatwave predicted! Grid demand SURGING.";
+                    duration = 45;
+                } else if (r < 0.90) {
+                    state.market.state = 'BEAR';
+                    state.market.news = "NEWS: Mild weather across region. Consumption LOW.";
+                    duration = 45;
+                } else {
+                    state.market.state = 'HIGH_VOLATILITY';
+                    state.market.news = "NEWS: Grid instability detected. Prices ERRATIC.";
+                    duration = 20;
+                }
+                state.market.timer = duration;
+            }
+
+            // Apply Multiplier based on State
+            state.market.phase += dt * 0.5;
+            let target = 1.0;
+
+            if (state.market.state === 'STABLE') {
+                target = 1.0 + Math.sin(state.market.phase) * 0.2; // 0.8 - 1.2
+            } else if (state.market.state === 'BULL') {
+                target = 1.8 + Math.sin(state.market.phase * 2) * 0.4; // 1.4 - 2.2
+            } else if (state.market.state === 'BEAR') {
+                target = 0.4 + Math.sin(state.market.phase * 0.5) * 0.1; // 0.3 - 0.5
+            } else if (state.market.state === 'HIGH_VOLATILITY') {
+                state.market.phase += dt * 4; // Fast flux
+                target = 1.0 + Math.sin(state.market.phase) * 1.5; // 0.1 - 2.5 WILD
+            }
+
+            // Smooth lerp
+            state.market.multiplier += (target - state.market.multiplier) * dt * (state.market.state === 'HIGH_VOLATILITY' ? 2.0 : 0.5);
+
+            // Clamp hard limits
+            if (state.market.multiplier < 0.05) state.market.multiplier = 0.05;
+            if (state.market.multiplier > 3.0) state.market.multiplier = 3.0;
+
+            // Trend History (every 1s approx)
+            if (!state.market.lastTrendUpdate) state.market.lastTrendUpdate = 0;
+            if (now - state.market.lastTrendUpdate > 1000) {
+                state.market.trend.push(state.market.multiplier);
+                if (state.market.trend.length > 24) state.market.trend.shift();
+                state.market.lastTrendUpdate = now;
+                renderMarketSparkline();
+            }
+
             let powerAvail = 0, unitRevTotal = 0;
             const eC = state.managers.filter(m => m.type === 'engineer').length, sC = state.managers.filter(m => m.type === 'safety').length, tC = state.managers.filter(m => m.type === 'tax').length;
-            const pM = 1 + (eC * 0.15), hM = 1 - (sC * 0.20), rM = 1 + (tC * 0.15);
+            const pM = 1 + (eC * 0.25), hM = 1 - (sC * 0.30), rM = 1 + (tC * 0.25);
+            const maintM = state.hasMaintenance ? 1.5 : 1.0;
 
             if (state.masterOverdriveActive) state.reactors.forEach(r => { if (!r.isScrammed) r.isOverdrive = true; });
 
@@ -1205,7 +1753,7 @@
                     } else r.heat = Math.max(0, r.heat - dt * 5);
                     ui.classList.toggle('shake-light', r.heat > 50 && r.heat <= 75); ui.classList.toggle('shake-heavy', r.heat > 75);
                 }
-                const m = r.isOverdrive ? 2.5 : 1, o = (r.isScrammed ? 0 : r.baseMW * m) * pM;
+                const m = r.isOverdrive ? 2.5 : 1, o = (r.isScrammed ? 0 : r.baseMW * m) * pM * maintM;
                 powerAvail += o;
                 const tierIdx = (r.heat < 25 ? 0 : r.heat < 50 ? 1 : r.heat < 75 ? 2 : 3);
                 const zm = r.isScrammed ? 0 : (r.heat < 1 ? 1 : GEN_TIER_MULTIPLIERS[r.gen][tierIdx]);
@@ -1232,14 +1780,16 @@
             let wm = 0;
             if (powerAvail > 0) state.reactors.forEach(r => {
                 if (!r.isScrammed) {
-                    const s = (r.baseMW * (r.isOverdrive ? 2.5 : 1) * pM) / powerAvail;
+                    const s = (r.baseMW * (r.isOverdrive ? 2.5 : 1) * pM * maintM) / powerAvail;
                     const tierIdx = (r.heat < 25 ? 0 : r.heat < 50 ? 1 : r.heat < 75 ? 2 : 3);
                     wm += (r.heat < 1 ? 1 : GEN_TIER_MULTIPLIERS[r.gen][tierIdx]) * s;
                 }
             });
 
             const cityBase = (state.buildings.house.count * 2) + (state.buildings.factory.count * 150) + (state.buildings.datacenter.count * dcRevenue) + (state.buildings.skyscraper.count * 25000);
-            const surplus = Math.max(0, powerAvail - demand), exportInc = surplus * 0.5;
+            const surplus = Math.max(0, powerAvail - demand);
+            const currentPrice = state.market.basePrice * state.market.multiplier;
+            const exportInc = surplus * currentPrice;
             const finalInc = (cityBase * eff * wm * rM) + (unitRevTotal * rM) + exportInc;
             state.cash += (finalInc * dt);
 
@@ -1250,9 +1800,37 @@
             const powerUsed = document.getElementById('power-used');
             if (cashDisplay) cashDisplay.innerText = formatNum(state.cash);
             if (incomeDisplay) incomeDisplay.innerText = formatNum(finalInc);
-            if (exportDisplay) exportDisplay.innerText = formatNum(exportInc);
+            if (exportDisplay) {
+                exportDisplay.innerText = formatNum(exportInc);
+                // Color code export based on market status (High = Green, Low = Red)
+                exportDisplay.className = (state.market.multiplier > 1.2 ? "text-emerald-400" : (state.market.multiplier < 0.8 ? "text-red-400" : "text-orange-400"));
+            }
             if (powerTotal) powerTotal.innerText = Math.floor(powerAvail);
             if (powerUsed) powerUsed.innerText = Math.floor(demand);
+
+            // Update Header Ticker
+            const priceEl = document.getElementById('market-price');
+            const arrowEl = document.getElementById('market-trend-arrow');
+            if (priceEl) {
+                priceEl.innerText = '$' + currentPrice.toFixed(2);
+                priceEl.className = "font-bold " + (state.market.multiplier > 1.0 ? "text-emerald-400" : "text-red-400");
+            }
+            if (arrowEl) {
+                const prev = state.market.trend[state.market.trend.length - 2] || 1.0;
+                const isUp = state.market.multiplier > prev;
+                arrowEl.innerHTML = isUp ? "▲" : "▼";
+                arrowEl.className = "text-xl font-bold " + (isUp ? "text-emerald-500" : "text-red-500");
+            }
+
+            const newsEl = document.getElementById('market-news');
+            if (newsEl && state.market.news) {
+                newsEl.innerText = state.market.news;
+                // Color based on state
+                newsEl.className = "text-[8px] font-bold uppercase tracking-widest inline-block animate-marquee pl-48 " +
+                    (state.market.state === 'BULL' ? "text-emerald-400" :
+                        state.market.state === 'BEAR' ? "text-red-400" :
+                            state.market.state === 'HIGH_VOLATILITY' ? "text-orange-400" : "text-gray-500");
+            }
 
             const effTag = document.getElementById('efficiency-tag');
             if (effTag) {
