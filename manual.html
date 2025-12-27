@@ -7,10 +7,15 @@
     <title>Atomic Tycoon - Employee Handbook</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
         body {
             background-color: #0f172a;
             color: #e2e8f0;
-            font-family: 'Courier New', monospace;
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            /* Prevent body scroll, handle inside content */
+            height: 100vh;
         }
 
         .crt-overlay {
@@ -32,12 +37,39 @@
             font-weight: bold;
         }
 
-        .section-card {
-            border: 1px solid #334155;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            border-radius: 0.5rem;
+        .section-content {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+
+        .section-content.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .nav-btn {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            border-left: 2px solid transparent;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
             background: rgba(30, 41, 59, 0.5);
+            color: #e2e8f0;
+        }
+
+        .nav-btn.active {
+            border-left-color: #10b981;
+            /* Emerald-500 */
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
         }
 
         .highlight {
@@ -49,86 +81,230 @@
             color: #ef4444;
             font-weight: bold;
         }
+
+        .text-info {
+            color: #3b82f6;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
     </style>
 </head>
 
-<body class="p-8 pb-20">
+<body class="flex flex-col h-screen">
     <div class="crt-overlay"></div>
-    <div class="max-w-4xl mx-auto z-10 relative">
-        <header class="text-center mb-12 border-b border-gray-700 pb-8">
-            <h1 class="text-4xl text-emerald-500 mb-2">Atomic Tycoon</h1>
-            <p class="text-sm text-gray-500 tracking-[0.2em]">OPERATOR SAFETY & OPERATIONS HANDBOOK v1.0</p>
-        </header>
 
-        <div class="section-card">
-            <h2 class="text-2xl text-blue-400 mb-4">1. Reactor Operations</h2>
-            <p class="mb-4">Your primary duty is the management of the fission reactor grid. Units generate revenue via
-                Energy Credits and power via MegaWatts (MW).</p>
-            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300">
-                <li><span class="highlight">Heat Management:</span> Reactors generate heat. If heat reaches 100%, the
-                    unit will <span class="danger">SCRAM</span> (emergency shutdown) to prevent meltdown. A SCRAMmed
-                    unit produces $0 and 0 MW until it cools.</li>
-                <li><span class="highlight">Overdrive:</span> You may manually override safety limits to boost output by
-                    250% (2.5x). Use with caution. Excessive Overdrive leads to rapid heat accumulation.</li>
-                <li><span class="highlight">Upgrades:</span> Reactors can be upgraded from Gen II to Gen V (Fusion).
-                    Higher generations are cleaner, more stable, and produce significantly more power.</li>
-            </ul>
+    <!-- Top Bar -->
+    <header class="border-b border-gray-700 bg-gray-900/50 p-4 flex justify-between items-center z-10 shrink-0">
+        <div>
+            <h1 class="text-xl text-emerald-500">Atomic Tycoon</h1>
+            <p class="text-[10px] text-gray-500 tracking-[0.2em] font-bold">OPERATOR HANDBOOK v1.0</p>
         </div>
+        <div class="text-[10px] text-gray-600">CONFIDENTIAL</div>
+    </header>
 
-        <div class="section-card">
-            <h2 class="text-2xl text-yellow-500 mb-4">2. The Energy Market</h2>
-            <p class="mb-4">Energy prices fluctuate based on global demand and weather events.</p>
-            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300">
-                <li><span class="highlight">Stable:</span> Normal operations. Price multiplier ~1.0x.</li>
-                <li><span class="highlight">Bull Market:</span> High demand (Heatwaves, etc.). Prices surge (~2.0x).
-                    Capitalize on this with Overdrive.</li>
-                <li><span class="highlight">Bear Market:</span> Low demand. Prices drop (~0.5x). Good time for
-                    maintenance/upgrades.</li>
-                <li><span class="highlight">Volatility:</span> Erratic price spikes. High risk, high reward.</li>
-            </ul>
-        </div>
-
-        <div class="section-card">
-            <h2 class="text-2xl text-purple-400 mb-4">3. Personnel</h2>
-            <p class="mb-4">Hiring specialized staff provides passive bonuses to your entire grid. Staff costs increase
-                exponentially ($1k -> $25k -> $1M -> $25M).</p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div class="p-3 border border-gray-700 rounded bg-gray-900">
-                    <h3 class="text-emerald-400 text-sm">Engineer</h3>
-                    <p class="text-xs text-gray-400 mt-1">+25% Power Output per staff.</p>
-                </div>
-                <div class="p-3 border border-gray-700 rounded bg-gray-900">
-                    <h3 class="text-purple-400 text-sm">Tax Consultant</h3>
-                    <p class="text-xs text-gray-400 mt-1">+25% City Revenue per staff.</p>
-                </div>
-                <div class="p-3 border border-gray-700 rounded bg-gray-900">
-                    <h3 class="text-red-400 text-sm">Safety Inspector</h3>
-                    <p class="text-xs text-gray-400 mt-1">-30% Heat Generation. Critical for Overdrive.</p>
-                </div>
-                <div class="p-3 border border-gray-700 rounded bg-gray-900">
-                    <h3 class="text-blue-400 text-sm">Procurement</h3>
-                    <p class="text-xs text-gray-400 mt-1">-10% Building/Unit Cost.</p>
+    <!-- Main Layout -->
+    <div class="flex-1 flex overflow-hidden relative z-10">
+        <!-- Sidebar -->
+        <nav class="w-64 bg-gray-900/30 border-r border-gray-700 flex flex-col p-4 space-y-2 overflow-y-auto shrink-0">
+            <button class="nav-btn active" onclick="showSection('overview')">00. Overview</button>
+            <div class="h-px bg-gray-800 my-2"></div>
+            <button class="nav-btn" onclick="showSection('reactors')">01. Reactor Ops</button>
+            <button class="nav-btn" onclick="showSection('market')">02. The Network</button>
+            <button class="nav-btn" onclick="showSection('personnel')">03. Staffing</button>
+            <button class="nav-btn" onclick="showSection('contracts')">04. Contracts</button>
+            <div class="mt-auto pt-8">
+                <div class="bg-gray-800/50 p-3 rounded border border-gray-700">
+                    <p class="text-[9px] text-gray-500 mb-1">CURRENT STATUS</p>
+                    <p class="text-xs text-emerald-500 font-bold">ONLINE</p>
                 </div>
             </div>
-        </div>
+        </nav>
 
-        <div class="section-card">
-            <h2 class="text-2xl text-emerald-500 mb-4">4. Contracts</h2>
-            <p class="mb-4">Corporate offers special contracts for operators who demonstrate exceptional grid control.
-            </p>
-            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300">
-                <li><span class="highlight">Types:</span> Stability Tests (No Brownouts), Surge Tests (High Heat), and
-                    Export Rushes (High Export).</li>
-                <li><span class="highlight">Rewards:</span> Contracts award large cash lump sums and Corporate
-                    Reputation.</li>
-                <li><span class="highlight">Reputation:</span> Higher reputation unlocks more lucrative contracts.</li>
-            </ul>
-        </div>
+        <!-- Content Area -->
+        <main class="flex-1 overflow-y-auto p-8 md:p-12 bg-gray-900/10">
 
-        <footer class="text-center text-xs text-gray-600 mt-12">
-            &copy; 2025 Atomic Energy Corp. Do not distribute.
-        </footer>
+            <!-- OVERVIEW SECTION -->
+            <div id="overview" class="section-content active">
+                <h2 class="text-3xl text-emerald-400 mb-6 border-b border-gray-700 pb-2">00. System Overview</h2>
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-gray-300 mb-4">Welcome, Superintendent. You have been entrusted with the operation of
+                        the region's primary fission reactor grid.</p>
+                    <p class="text-gray-300 mb-8">Your mandate is threefold:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="border border-gray-700 p-4 rounded bg-gray-800/30">
+                            <h3 class="text-emerald-400 text-sm mb-2">1. GENERATE</h3>
+                            <p class="text-xs text-gray-400">Produce MegaWatts (MW) to meet grid demand without causing
+                                meltdowns.</p>
+                        </div>
+                        <div class="border border-gray-700 p-4 rounded bg-gray-800/30">
+                            <h3 class="text-blue-400 text-sm mb-2">2. EXPAND</h3>
+                            <p class="text-xs text-gray-400">Use revenue to commission advanced reactor cores and build
+                                city infrastructure.</p>
+                        </div>
+                        <div class="border border-gray-700 p-4 rounded bg-gray-800/30">
+                            <h3 class="text-yellow-500 text-sm mb-2">3. STABILIZE</h3>
+                            <p class="text-xs text-gray-400">Manage grid frequency and prevent brownouts during demand
+                                spikes.</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-500">Select a topic from the sidebar to access detailed operational
+                        parameters.</p>
+                </div>
+            </div>
+
+            <!-- REACTORS SECTION -->
+            <div id="reactors" class="section-content">
+                <h2 class="text-3xl text-blue-400 mb-6 border-b border-gray-700 pb-2">01. Reactor Operations</h2>
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-xl text-gray-200 mb-2">Core Mechanics</h3>
+                        <p class="text-sm text-gray-400 mb-4">Reactors are the heart of your empire. Each unit converts
+                            fuel into Heat and Energy.</p>
+                        <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300">
+                            <li><span class="highlight">Heat:</span> Byproduct of generation. <span class="danger">100%
+                                    Heat = SCRAM</span>.</li>
+                            <li><span class="danger">SCRAM:</span> Safety Control Rod Axe Man. An emergency shutdown
+                                that halts production until the core cools to 0%.</li>
+                            <li><span class="highlight">Overdrive (OVR):</span> Manual override. Boosts output by <span
+                                    class="text-emerald-400">2.5x</span> but generates heat rapidly.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MARKET SECTION -->
+            <div id="market" class="section-content">
+                <h2 class="text-3xl text-yellow-500 mb-6 border-b border-gray-700 pb-2">02. The Network</h2>
+                <div class="space-y-6">
+                    <p class="text-sm text-gray-300">The energy market is volatile. Prices ($/MW) update in real-time
+                        based on supply, demand, and external events.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 border border-gray-700 rounded bg-gray-800/20">
+                            <h3 class="text-emerald-400 text-sm mb-1">STABLE MARKET</h3>
+                            <p class="text-xs text-gray-500">Standard operating conditions. Prices hover around base
+                                rates.</p>
+                        </div>
+                        <div class="p-4 border border-gray-700 rounded bg-gray-800/20">
+                            <h3 class="text-green-400 text-sm mb-1">BULL MARKET</h3>
+                            <p class="text-xs text-gray-500">High Demand. Prices surge (<span
+                                    class="text-green-400">~2.0x</span>). Ideal time for aggressive Overdrive.</p>
+                        </div>
+                        <div class="p-4 border border-gray-700 rounded bg-gray-800/20">
+                            <h3 class="text-red-400 text-sm mb-1">BEAR MARKET</h3>
+                            <p class="text-xs text-gray-500">Low Demand. Prices drop (<span
+                                    class="text-red-400">~0.5x</span>). Ideal time for cooling and repairs.</p>
+                        </div>
+                        <div class="p-4 border border-gray-700 rounded bg-gray-800/20">
+                            <h3 class="text-yellow-400 text-sm mb-1">VOLATILE</h3>
+                            <p class="text-xs text-gray-500">Chaotic fluctuations. High risk, potential for massive
+                                gains or losses.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PERSONNEL SECTION -->
+            <div id="personnel" class="section-content">
+                <h2 class="text-3xl text-purple-400 mb-6 border-b border-gray-700 pb-2">03. Staffing & HR</h2>
+                <p class="text-sm text-gray-300 mb-6">Automation has limits. Hired specialists provide passive buffs to
+                    your entire facility.</p>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-gray-400 border border-gray-700">
+                        <thead class="bg-gray-800 text-gray-200">
+                            <tr>
+                                <th class="p-3 border-r border-gray-700">Role</th>
+                                <th class="p-3">Effect</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700">
+                            <tr>
+                                <td class="p-3 text-emerald-400 font-bold border-r border-gray-700">ENGINEER</td>
+                                <td class="p-3">+25% Total Power Output</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 text-purple-400 font-bold border-r border-gray-700">TAX CONSULTANT</td>
+                                <td class="p-3">+25% Passive City Revenue</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 text-red-400 font-bold border-r border-gray-700">SAFETY INSPECTOR</td>
+                                <td class="p-3">-30% Heat Generation (Crucial for extended Overdrive)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 text-blue-400 font-bold border-r border-gray-700">PROCUREMENT</td>
+                                <td class="p-3">-10% to all Building & Unit costs</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- CONTRACTS SECTION -->
+            <div id="contracts" class="section-content">
+                <h2 class="text-3xl text-emerald-500 mb-6 border-b border-gray-700 pb-2">04. Corporate Contracts</h2>
+                <p class="text-sm text-gray-300 mb-6">Prove your mastery of the grid to earn Reputation and large cash
+                    bonuses.</p>
+
+                <div class="space-y-6">
+                    <div class="bg-gray-800/40 p-4 rounded border-l-2 border-emerald-500">
+                        <h3 class="text-emerald-400 font-bold mb-1">STABILITY AUDIT</h3>
+                        <p class="text-xs text-gray-400">Maintain 100% Efficiency (No Brownouts) for the duration.
+                            <br><span class="text-gray-500">Fail condition: Power Drop.</span></p>
+                    </div>
+                    <div class="bg-gray-800/40 p-4 rounded border-l-2 border-yellow-500">
+                        <h3 class="text-yellow-400 font-bold mb-1">SURGE TEST</h3>
+                        <p class="text-xs text-gray-400">Push Reactors to limits. Maintain >50% Heat. <br><span
+                                class="text-gray-500">Fail condition: SCRAM.</span></p>
+                    </div>
+                    <div class="bg-gray-800/40 p-4 rounded border-l-2 border-red-500">
+                        <h3 class="text-red-400 font-bold mb-1">EXPORT RUSH</h3>
+                        <p class="text-xs text-gray-400">Divert power to the external grid. Export >50% of generation.
+                            <br><span class="text-gray-500">Tip: Shut down local city factories to pass.</span></p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
     </div>
+
+    <script>
+        function showSection(id) {
+            // Hide all sections
+            document.querySelectorAll('.section-content').forEach(el => el.classList.remove('active'));
+            // Remove active style from buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+            // Show target
+            const target = document.getElementById(id);
+            if (target) target.classList.add('active');
+
+            // Highlight button
+            // Find button that calls this function with this id - simple hack or strict query
+            // Simple way: iterate all buttons, check onclick attribute or just match index
+            // Better: event.target if passed, but here we just re-query based on Text or similar? 
+            // Simplest: The button that was clicked.
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
+        }
+    </script>
 </body>
 
 </html>
