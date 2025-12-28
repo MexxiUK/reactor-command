@@ -804,6 +804,34 @@ function hireManager() {
     renderManagers(); refreshStaticUI(); scheduleSave();
 }
 
+// Global state to track which manager is being considered for firing
+let fireConfirmTarget = -1;
+
+function fireManager(index) {
+    const m = state.managers[index];
+    if (!m) return;
+
+    if (fireConfirmTarget === index) {
+        // Confirmed
+        state.managers.splice(index, 1);
+        fireConfirmTarget = -1; // Reset
+        renderManagers();
+        refreshStaticUI();
+        scheduleSave();
+    } else {
+        // First click - ask for confirmation
+        fireConfirmTarget = index;
+        renderManagers();
+        // Auto-reset after 3 seconds if not confirmed
+        setTimeout(() => {
+            if (fireConfirmTarget === index) {
+                fireConfirmTarget = -1;
+                renderManagers();
+            }
+        }, 3000);
+    }
+}
+
 function buyArchitecture() { if (state.maxGenUnlocked < 5) { state.maxGenUnlocked++; scheduleSave(); renderReactors(); refreshStaticUI(); } }
 
 function updateManagerType(managerId, nT) {
@@ -829,7 +857,7 @@ function renderManagers() {
 
     for (let i = 0; i < 4; i++) {
         const slot = document.createElement('div');
-        slot.className = "border border-gray-700 bg-gray-900/80 rounded p-2 flex flex-col justify-between h-20 transition-all";
+        slot.className = "border border-gray-700 bg-gray-900/80 rounded p-2 flex flex-col justify-between min-h-[5rem] h-auto transition-all";
 
         // Locked Slot Logic
         // Locked Slot Logic
@@ -855,7 +883,9 @@ function renderManagers() {
             slot.innerHTML = `
                 <div class="h-full flex flex-col justify-between">
                     <div>
-                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">SLOT ${i + 1}</div>
+                        <div class="flex justify-between items-center mb-1">
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">SLOT ${i + 1}</div>
+                        </div>
                         <div class="text-[11px] font-bold text-white mb-2 truncate">${m.name}</div>
                     </div>
                     
@@ -866,14 +896,11 @@ function renderManagers() {
                             ${Object.keys(MANAGER_TYPES).map(k => `<option value="${k}" ${m.type === k ? 'selected' : ''}>${MANAGER_TYPES[k].name}</option>`).join('')}
                         </select>
                         ${isOnCooldown ? `<div class="text-[9px] text-red-400 font-bold text-center">COOLDOWN: ${(cooldown / 1000).toFixed(0)}s</div>` : ''}
-                        <div class="text-[9px] text-gray-500 leading-tight h-8 overflow-hidden">
-                            ${MANAGER_TYPES[m.type].desc}
-                        </div>
                     </div>
                     
-                    <button class="w-full mt-2 bg-red-900/30 border border-red-900/50 text-red-400 text-[9px] font-bold py-1 hover:bg-red-900/50 uppercase rounded-sm"
-                        onclick="if(confirm('Fire ${m.name}?')) { state.managers.splice(${i}, 1); renderManagers(); refreshStaticUI(); scheduleSave(); }">
-                        TERMINATE
+                    <button class="w-full mt-2 border text-[9px] font-bold py-1 uppercase rounded-sm transition-colors ${fireConfirmTarget === i ? 'bg-red-600 border-red-500 text-white animate-pulse' : 'bg-red-900/30 border-red-900/50 text-red-400 hover:bg-red-900/50'}"
+                        onclick="fireManager(${i})">
+                        ${fireConfirmTarget === i ? 'CONFIRM TERMINATION?' : 'TERMINATE'}
                     </button>
                 </div>
             `;
@@ -885,6 +912,25 @@ function renderManagers() {
     }
     const managerCountEl = document.getElementById('manager-count');
     if (managerCountEl) managerCountEl.innerText = state.managers.length;
+
+    // Update global personnel tooltip
+    const tooltipEl = document.getElementById('personnel-roles-tooltip');
+    if (tooltipEl && tooltipEl.children.length <= 1) { // Only populate if empty (keep header)
+        let html = '<div class="text-[10px] font-bold text-emerald-400 mb-2 border-b border-gray-700 pb-1">AVAILABLE ROLES</div>';
+        Object.keys(MANAGER_TYPES).forEach(key => {
+            const type = MANAGER_TYPES[key];
+            html += `
+                <div class="mb-2 last:mb-0">
+                    <div class="flex justify-between text-[10px] font-bold text-${type.color}-400">
+                        <span>${type.name}</span>
+                        <span>${type.bonus}</span>
+                    </div>
+                    <div class="text-[9px] text-gray-400 leading-tight">${type.desc}</div>
+                </div>
+            `;
+        });
+        tooltipEl.innerHTML = html;
+    }
 }
 
 

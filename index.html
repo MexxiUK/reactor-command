@@ -254,7 +254,21 @@
 
                 <div class="bg-gray-900/50 p-4 border border-gray-800 rounded-md">
                     <div class="flex justify-between items-center mb-3">
-                        <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest">🛡️ PERSONNEL</h4>
+                        <div class="flex items-center gap-2">
+                            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest">🛡️ PERSONNEL</h4>
+                            <div class="tooltip cursor-help relative">
+                                <span
+                                    class="text-[10px] text-gray-500 border border-gray-600 rounded-full w-4 h-4 flex items-center justify-center hover:text-white hover:border-white transition-colors">?</span>
+                                <div id="personnel-roles-tooltip"
+                                    class="tooltiptext bg-gray-900 border border-emerald-500/50 text-gray-200 shadow-xl z-50 p-3"
+                                    style="width: 280px; margin-left: -140px; bottom: 140%;">
+                                    <div
+                                        class="text-[10px] font-bold text-emerald-400 mb-2 border-b border-gray-700 pb-1">
+                                        AVAILABLE ROLES</div>
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
                         <span class="text-[10px] font-bold text-gray-600"><span id="manager-count">0</span>/4</span>
                     </div>
                     <div id="manager-slots" class="grid grid-cols-2 gap-2"></div>
