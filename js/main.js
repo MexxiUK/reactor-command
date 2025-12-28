@@ -1,3 +1,6 @@
+// ========== DEBUG CONFIGURATION ==========
+const DEBUG_ENABLED = false; // Set to false for production
+
 let state = JSON.parse(JSON.stringify(INITIAL_STATE));
 let lastTick = Date.now();
 
@@ -11,13 +14,203 @@ function assignUpgradeActions() {
     UPGRADES.find(u => u.id === 'ai').action = () => { state.hasAI = true; };
     UPGRADES.find(u => u.id === 'llm').action = () => { state.hasLLM = true; };
     UPGRADES.find(u => u.id === 'maintenance').action = () => { state.hasMaintenance = true; };
+    UPGRADES.find(u => u.id === 'unlock_battery').action = () => { state.hasUnlockBattery = true; };
+
+    // Battery Upgrades
+    UPGRADES.find(u => u.id === 'tier1_bat').action = () => { state.hasTier1Bat = true; recalcBatteryCapacity(); };
+    UPGRADES.find(u => u.id === 'tier2_bat').action = () => { state.hasTier2Bat = true; recalcBatteryCapacity(); };
+    UPGRADES.find(u => u.id === 'tier3_bat').action = () => { state.hasTier3Bat = true; recalcBatteryCapacity(); };
+    UPGRADES.find(u => u.id === 'tier4_bat').action = () => { state.hasTier4Bat = true; recalcBatteryCapacity(); };
+}
+
+function recalcBatteryCapacity() {
+    let cap = 100; // Base
+    if (state.hasTier1Bat) cap += 400;
+    if (state.hasTier2Bat) cap += 1500;
+    if (state.hasTier3Bat) cap += 8000;
+    if (state.hasTier4Bat) cap += 40000;
+
+    if (state.buildings.battery) state.buildings.battery.capacity = cap;
 }
 
 // SAVE SYSTEM
+// SAVE SYSTEM
+let saveTimeout = null;
+
+function scheduleSave() {
+    if (saveTimeout) return;
+    saveTimeout = setTimeout(() => {
+        saveGame();
+        saveTimeout = null;
+    }, 1000);
+}
+
 function saveGame() {
     state.lastSaveTime = Date.now();
     localStorage.setItem('atomic-tycoon-save', JSON.stringify(state));
     console.log('Game Saved');
+}
+
+// ============== RESEARCH TREE SYSTEM ==============
+
+function unlockResearch(id) {
+    const node = RESEARCH_TREE.find(n => n.id === id);
+    if (!node) return console.error('Research not found:', id);
+
+    // Check if already unlocked
+    if (state.researchUnlocked.includes(id)) return;
+
+    // Check prerequisites
+    const prereqsMet = node.requires.every(req => state.researchUnlocked.includes(req));
+    if (!prereqsMet) return console.warn('Prerequisites not met for:', id);
+
+    // Check cost
+    if (state.cash < node.cost) return console.warn('Not enough cash for:', id);
+
+    // Purchase
+    state.cash -= node.cost;
+    state.researchUnlocked.push(id);
+    node.effect(state);
+
+    scheduleSave();
+    renderResearchTree();
+    refreshStaticUI();
+    renderReactors(); // Fix: Update reactor UI when maxGenUnlocked changes
+
+    console.log('Research unlocked:', node.name);
+}
+
+function renderResearchTree() {
+    const container = document.getElementById('research-tree-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Create nodes
+    RESEARCH_TREE.forEach(node => {
+        const isUnlocked = state.researchUnlocked.includes(node.id);
+        const prereqsMet = node.requires.every(req => state.researchUnlocked.includes(req));
+        const canAfford = state.cash >= node.cost;
+
+        const div = document.createElement('div');
+        div.className = `research-node ${isUnlocked ? 'unlocked' : (prereqsMet ? 'available' : 'locked')} ${prereqsMet && canAfford && !isUnlocked ? 'affordable' : ''}`;
+        div.style.gridRow = node.row + 1;
+        div.style.gridColumn = node.col + 1;
+        div.dataset.id = node.id;
+
+        div.innerHTML = `
+            <div class="research-icon">${isUnlocked ? '✓' : '?'}</div>
+            <div class="research-name">${node.name}</div>
+            <div class="research-cost">${isUnlocked ? 'UNLOCKED' : '$' + formatNum(node.cost)}</div>
+        `;
+
+        div.title = node.desc;
+
+        if (!isUnlocked && prereqsMet) {
+            div.onclick = () => unlockResearch(node.id);
+        }
+
+        container.appendChild(div);
+    });
+
+    // Draw connector lines (SVG overlay)
+    const svg = document.getElementById('research-lines');
+    if (svg) {
+        svg.innerHTML = '';
+        RESEARCH_TREE.forEach(node => {
+            node.requires.forEach(reqId => {
+                const parent = RESEARCH_TREE.find(n => n.id === reqId);
+                if (!parent) return;
+
+                const isActive = state.researchUnlocked.includes(reqId);
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+
+                // Calculate positions based on grid
+                const cellW = 140, cellH = 100, offsetX = 70, offsetY = 50;
+                line.setAttribute('x1', parent.col * cellW + offsetX);
+                line.setAttribute('y1', parent.row * cellH + offsetY + 30);
+                line.setAttribute('x2', node.col * cellW + offsetX);
+                line.setAttribute('y2', node.row * cellH + offsetY - 30);
+                line.setAttribute('class', isActive ? 'research-line active' : 'research-line');
+
+                svg.appendChild(line);
+            });
+        });
+    }
+}
+
+function openResearchModal() {
+    const modal = document.getElementById('research-modal');
+    if (modal) {
+        modal.classList.add('open');
+        renderResearchTree();
+    }
+}
+
+function closeResearchModal() {
+    const modal = document.getElementById('research-modal');
+    if (modal) modal.classList.remove('open');
+}
+
+// ============== PRESTIGE SYSTEM ==============
+
+const PRESTIGE_THRESHOLD = 1000000000; // $1 Billion
+
+function canPrestige() {
+    return state.cash >= PRESTIGE_THRESHOLD;
+}
+
+function doPrestige() {
+    if (!canPrestige()) return;
+
+    // Calculate prestige points earned (1 per $100M over threshold)
+    const earned = Math.floor((state.cash - PRESTIGE_THRESHOLD) / 100000000) + 1;
+
+    // Save permanent data
+    const prestigeLevel = state.prestigeLevel + 1;
+    const prestigePoints = state.prestigePoints + earned;
+    const permanentBonuses = { ...state.permanentBonuses };
+
+    // Reset state
+    state = JSON.parse(JSON.stringify(INITIAL_STATE));
+
+    // Restore permanent data
+    state.prestigeLevel = prestigeLevel;
+    state.prestigePoints = prestigePoints;
+    state.permanentBonuses = permanentBonuses;
+
+    // Apply starting cash bonus
+    state.cash = 150 + (permanentBonuses.startingCash * prestigeLevel);
+
+    saveGame();
+    location.reload();
+}
+
+function openPrestigeModal() {
+    if (!canPrestige()) return;
+    const modal = document.getElementById('prestige-modal');
+    if (modal) {
+        const earned = Math.floor((state.cash - PRESTIGE_THRESHOLD) / 100000000) + 1;
+        document.getElementById('prestige-points-preview').innerText = earned;
+        modal.classList.add('open');
+    }
+}
+
+function closePrestigeModal() {
+    const modal = document.getElementById('prestige-modal');
+    if (modal) modal.classList.remove('open');
+}
+
+
+function updateBatteryRate(val) {
+    let n = parseInt(val);
+    if (isNaN(n)) n = 100;
+    if (n < 0) n = 0;
+    if (n > 100) n = 100;
+
+    state.batteryChargeRate = n / 100;
+    const el = document.getElementById('charge-rate-display');
+    if (el) el.innerText = n + "%";
 }
 
 function loadGame() {
@@ -32,11 +225,46 @@ function loadGame() {
             });
             if (!state.market) state.market = { ...INITIAL_STATE.market };
 
+            // Initialize Battery State if missing (v1.3.0)
+            if (!state.buildings.battery) state.buildings.battery = { ...INITIAL_STATE.buildings.battery };
+            else {
+                // Fix for old saves: Ensure properties like capacity exist
+                if (state.buildings.battery.capacity === undefined) state.buildings.battery.capacity = INITIAL_STATE.buildings.battery.capacity;
+                if (state.buildings.battery.demand === undefined) state.buildings.battery.demand = INITIAL_STATE.buildings.battery.demand;
+
+                // v1.4.0 Migration: Enforce capacity based on upgrades
+                // If user has old 2000 capacity but no upgrades, we should technically grant them Tier 2?
+                // Or just force recalculate. Let's be strict: if you have no upgrades, you get 100.
+                // We'll trust recalcBatteryCapacity to handle it.
+                // Exception: If this is a Legacy Save with 2000 and NO upgrades, they lose capacity. 
+                // That is acceptable per plan (breaking change for balance).
+                recalcBatteryCapacity();
+            }
+            // Logic to auto-unlock if you already have batteries (Legacy Save Support)
+            if (state.buildings.battery.count > 0) state.hasUnlockBattery = true;
+
+            if (state.storedPower === undefined) state.storedPower = 0;
+
+            // Validate Charge Rate (Anti-Corruption)
+            if (typeof state.batteryChargeRate !== 'number' || isNaN(state.batteryChargeRate) || state.batteryChargeRate < 0 || state.batteryChargeRate > 1) {
+                state.batteryChargeRate = 1.0;
+            }
+
             // Validate Next Unit Cost for new scaling
             const rCount = state.reactors.length;
             if (rCount === 1) state.nextUnitCost = 5000;
             else if (rCount === 2) state.nextUnitCost = 500000;
             else if (rCount === 3) state.nextUnitCost = 50000000;
+
+            // v1.5.0 Migration: Research Tree & Prestige System
+            if (!state.researchUnlocked) state.researchUnlocked = [];
+            if (!state.prestigeLevel) state.prestigeLevel = 0;
+            if (!state.prestigePoints) state.prestigePoints = 0;
+            if (!state.permanentBonuses) state.permanentBonuses = { ...INITIAL_STATE.permanentBonuses };
+            else {
+                // Deep merge permanentBonuses to ensure new fields exist
+                state.permanentBonuses = { ...INITIAL_STATE.permanentBonuses, ...state.permanentBonuses };
+            }
 
             checkOfflineProgress();
         } catch (e) { console.error("Save Corrupt", e); }
@@ -137,6 +365,7 @@ function getHeatFillClass(heat) {
 }
 
 function toggleDebug() {
+    if (!DEBUG_ENABLED) return; // Button disabled when DEBUG_ENABLED is false
     state.debugOpen = !state.debugOpen;
     const panel = document.getElementById('debug-panel');
     if (panel) panel.style.display = (state.debugOpen ? 'block' : 'none');
@@ -165,13 +394,22 @@ function refreshStaticUI() {
     const pC = state.managers.filter(m => m.type === 'procurement').length;
     const discount = 1 - (pC * 0.10);
 
-    ['house', 'factory', 'datacenter', 'skyscraper'].forEach(t => {
+    ['house', 'factory', 'datacenter', 'skyscraper', 'battery'].forEach(t => {
         const b = state.buildings[t];
         const countEl = document.getElementById('count-' + t);
         const costEl = document.getElementById('cost-' + t);
         if (countEl) countEl.innerText = b.count;
         if (costEl) costEl.innerText = formatNum(Math.floor(b.baseCost * Math.pow(1.2, b.count) * discount));
     });
+
+    // Update Slider
+    const slider = document.getElementById('battery-slider');
+    const rateDisp = document.getElementById('charge-rate-display');
+    if (slider && rateDisp) {
+        const rate = state.batteryChargeRate !== undefined ? state.batteryChargeRate : 1.0;
+        slider.value = rate * 100;
+        rateDisp.innerText = slider.value + "%";
+    }
 
     const dcTitle = document.getElementById('dc-title-label');
     if (dcTitle) dcTitle.innerText = (state.hasAI ? "AI DATA CENTER" : "DATA CENTER");
@@ -290,6 +528,7 @@ function addReactor() {
         else if (state.reactors.length === 3) state.nextUnitCost = 50000000;
 
         renderReactors(); refreshStaticUI();
+        scheduleSave();
     }
 }
 
@@ -310,6 +549,7 @@ function upgradeReactor(id) {
             r.baseMW *= 3.0;
         }
         renderReactors(); refreshStaticUI();
+        scheduleSave();
     }
 }
 
@@ -401,7 +641,7 @@ function buyBuilding(type) {
     if ((type === 'factory' && state.buildings.house.count < 10) ||
         (type === 'datacenter' && state.buildings.factory.count < 20) ||
         (type === 'skyscraper' && (state.buildings.datacenter.count < 10 || state.maxGenUnlocked < 5))) return;
-    if (state.cash >= cost) { state.cash -= cost; b.count++; refreshStaticUI(); }
+    if (state.cash >= cost) { state.cash -= cost; b.count++; scheduleSave(); refreshStaticUI(); }
 }
 
 function hireManager() {
@@ -409,10 +649,11 @@ function hireManager() {
     if (state.managers.length >= 4 || state.cash < cost) return;
     state.cash -= cost;
     state.managers.push({ id: Date.now(), type: 'engineer' });
+    scheduleSave();
     renderManagers(); refreshStaticUI();
 }
 
-function buyArchitecture() { if (state.maxGenUnlocked < 5) { state.maxGenUnlocked++; renderReactors(); refreshStaticUI(); } }
+function buyArchitecture() { if (state.maxGenUnlocked < 5) { state.maxGenUnlocked++; scheduleSave(); renderReactors(); refreshStaticUI(); } }
 
 function updateManagerType(managerId, nT) {
     const m = state.managers.find(m => m.id === managerId);
@@ -603,11 +844,30 @@ function completeContract(success) {
     refreshStaticUI();
 }
 
+// --- REFACTORED GAME LOOP ---
+
+let lastRender = 0;
+// Global Cache for Rendering (Non-persistent)
+const renderCache = { gridElements: [], lastGridCount: -1 };
+
 function gameLoop() {
     const now = Date.now();
     const dt = ((now - lastTick) / 1000) * state.ffMultiplier;
     lastTick = now;
 
+    updateLogic(dt);
+
+    // Throttle Rendering to ~30 FPS (32ms)
+    if (now - lastRender > 32) {
+        renderUI();
+        lastRender = now;
+    }
+
+    // Always request next frame
+    requestAnimationFrame(gameLoop);
+}
+
+function updateLogic(dt) {
     if (!state.contracts) state.contracts = { available: [], active: null, completed: 0, reputation: 0 };
     state.income = state.lastIncome || 100;
 
@@ -618,38 +878,29 @@ function gameLoop() {
         const passed = def.check(state);
 
         if (c.typeId === 'stability') {
-            if (!passed) { completeContract(false); return requestAnimationFrame(gameLoop); }
+            if (!passed) { completeContract(false); return; }
         } else {
             if (!passed) c.failTimer = (c.failTimer || 0) + dt;
             else c.failTimer = 0;
-            if (c.failTimer > 2.0) { } // Placeholder for grace period logic
+            if (c.failTimer > 2.0) { }
         }
 
         if (!c.timeSatisfied) c.timeSatisfied = 0;
 
         if (passed) {
             c.timeSatisfied += dt;
-            document.getElementById('contract-status-text').innerHTML = '<span class="text-emerald-500">CONDITION MET</span>';
-            document.getElementById('contract-progress-bar').className = 'bg-emerald-500 h-full transition-all duration-300';
         } else {
-            document.getElementById('contract-status-text').innerHTML = '<span class="text-red-500">CONDITION FAILED</span>';
-            document.getElementById('contract-progress-bar').className = 'bg-red-500 h-full transition-all duration-300';
-            if (c.typeId === 'stability') { completeContract(false); return requestAnimationFrame(gameLoop); }
+            if (c.typeId === 'stability') { completeContract(false); return; }
         }
-
-        const pct = (c.timeSatisfied / c.duration) * 100;
-        document.getElementById('contract-progress-bar').style.width = pct + '%';
-        document.getElementById('contract-timer').innerText = (c.duration - c.timeSatisfied).toFixed(1) + 's';
 
         if (c.timeSatisfied >= c.duration) {
             completeContract(true);
-            return requestAnimationFrame(gameLoop);
+            return;
         }
     }
 
     // MARKET LOGIC
     if (!state.market) state.market = { basePrice: 0.10, multiplier: 1.0, trend: [], phase: 0, state: 'STABLE', news: 'Market Stable.', timer: 0 };
-
     if (!state.market.timer) state.market.timer = 0;
     state.market.timer -= dt;
     if (state.market.timer <= 0) {
@@ -677,33 +928,32 @@ function gameLoop() {
 
     state.market.phase += dt * 0.5;
     let target = 1.0;
-
-    if (state.market.state === 'STABLE') {
-        target = 1.0 + Math.sin(state.market.phase) * 0.2;
-    } else if (state.market.state === 'BULL') {
-        target = 1.8 + Math.sin(state.market.phase * 2) * 0.4;
-    } else if (state.market.state === 'BEAR') {
-        target = 0.4 + Math.sin(state.market.phase * 0.5) * 0.1;
-    } else if (state.market.state === 'HIGH_VOLATILITY') {
+    if (state.market.state === 'STABLE') target = 1.0 + Math.sin(state.market.phase) * 0.2;
+    else if (state.market.state === 'BULL') target = 1.8 + Math.sin(state.market.phase * 2) * 0.4;
+    else if (state.market.state === 'BEAR') target = 0.4 + Math.sin(state.market.phase * 0.5) * 0.1;
+    else if (state.market.state === 'HIGH_VOLATILITY') {
         state.market.phase += dt * 4;
         target = 1.0 + Math.sin(state.market.phase) * 1.5;
     }
 
     state.market.multiplier += (target - state.market.multiplier) * dt * (state.market.state === 'HIGH_VOLATILITY' ? 2.0 : 0.5);
-
     if (state.market.multiplier < 0.05) state.market.multiplier = 0.05;
     if (state.market.multiplier > 3.0) state.market.multiplier = 3.0;
 
+    const now = Date.now(); // Local now for logic
     if (!state.market.lastTrendUpdate) state.market.lastTrendUpdate = 0;
     if (now - state.market.lastTrendUpdate > 1000) {
         state.market.trend.push(state.market.multiplier);
         if (state.market.trend.length > 24) state.market.trend.shift();
         state.market.lastTrendUpdate = now;
-        renderMarketSparkline();
+        // renderMarketSparkline called in renderUI now (via flag?) or just let renderUI handle it
     }
 
+    // POWER CALCS
     let powerAvail = 0, unitRevTotal = 0;
-    const eC = state.managers.filter(m => m.type === 'engineer').length, sC = state.managers.filter(m => m.type === 'safety').length, tC = state.managers.filter(m => m.type === 'tax').length;
+    const eC = state.managers.filter(m => m.type === 'engineer').length;
+    const sC = state.managers.filter(m => m.type === 'safety').length;
+    const tC = state.managers.filter(m => m.type === 'tax').length;
     const pM = 1 + (eC * 0.25), hM = 1 - (sC * 0.30), rM = 1 + (tC * 0.25);
     const maintM = state.hasMaintenance ? 1.5 : 1.0;
 
@@ -711,61 +961,80 @@ function gameLoop() {
 
     let cascade = false;
     state.reactors.forEach(r => {
-        const ui = document.querySelector('.reactor-unit[data-id="' + r.id + '"]');
-        if (!ui) return;
         const stab = GEN_STABILITY[r.gen] || 1.0;
         if (r.isScrammed) {
             const rR = state.hasFirefighters ? 15 : 12;
             r.heat -= dt * rR; if (r.heat <= 0) { r.heat = 0; r.isScrammed = false; }
-            ui.classList.add('scram-active');
         } else {
-            ui.classList.remove('scram-active');
             if (r.isOverdrive) {
                 r.heat += dt * 16 * (1 + (r.heat / 40)) * hM * stab;
                 if (r.heat >= 100) { r.heat = 100; r.isScrammed = true; r.isOverdrive = false; if (state.masterOverdriveActive) cascade = true; }
-            } else r.heat = Math.max(0, r.heat - dt * 5);
-            ui.classList.toggle('shake-light', r.heat > 50 && r.heat <= 75); ui.classList.toggle('shake-heavy', r.heat > 75);
+            } else {
+                const heatDissip = state.permanentBonuses ? state.permanentBonuses.heatDissipation : 1.0;
+                r.heat = Math.max(0, r.heat - dt * 5 * heatDissip);
+            }
         }
 
         const tierIdx = (r.heat < 25 ? 0 : r.heat < 50 ? 1 : r.heat < 75 ? 2 : 3);
         const bonusMW = (GEN_POWER_BONUS[r.gen] || [0, 0, 0, 0])[tierIdx];
-
         const o = (r.isScrammed ? 0 : r.baseMW + bonusMW) * pM * maintM;
         powerAvail += o;
 
         const zm = r.isScrammed ? 0 : (r.heat < 1 ? 1 : GEN_TIER_MULTIPLIERS[r.gen][tierIdx]);
         const unitRev = (GEN_BASE_GRANT[r.gen] || 5) * zm;
         unitRevTotal += unitRev;
-        ui.querySelector('.u-temp-val').innerText = Math.floor(r.heat) + '%'; ui.querySelector('.u-multiplier-val').innerText = zm.toFixed(2) + 'x';
-        const f = ui.querySelector('.u-heat-fill'); f.style.width = r.heat + '%';
-        f.className = 'heat-bar-fill u-heat-fill ' + getHeatFillClass(r.heat);
-        ui.querySelector('.u-power').innerText = Math.floor(o); ui.querySelector('.u-rev').innerText = formatNum(unitRev);
-        ui.querySelector('.u-scram-overlay').classList.toggle('hidden', !r.isScrammed);
-
-        // Dynamic update of Coolant Button state
-        const coolBtn = ui.querySelector('.u-coolant-btn');
-        if (coolBtn) {
-            const coolCost = getCoolantCost(r.gen);
-            const canAfford = state.cash >= coolCost;
-            const hasHeat = r.heat >= 1;
-            const isEnabled = canAfford && hasHeat;
-
-            coolBtn.disabled = !isEnabled;
-            coolBtn.classList.toggle('opacity-50', !isEnabled);
-            coolBtn.classList.toggle('cursor-not-allowed', !isEnabled);
-        }
     });
 
     if (cascade) {
-        state.masterOverdriveActive = false; const mB = document.getElementById('master-ovr-btn');
-        if (mB) { mB.classList.remove('master-ovr-active'); mB.innerText = "Hold for Master Overdrive"; }
+        state.masterOverdriveActive = false;
         state.reactors.forEach(r => { r.isScrammed = true; r.isOverdrive = false; r.heat = 100; });
+        // UI updates handled in renderUI via state check
     }
 
     const dcDemand = state.hasLLM ? 400 : (state.hasAI ? 600 : 200);
     const dcRevenue = state.hasAI ? 5000 : 2500;
     const demand = (state.buildings.house.count * 1) + (state.buildings.factory.count * 25) + (state.buildings.datacenter.count * dcDemand) + (state.buildings.skyscraper.count * 1000);
-    const isBrownout = powerAvail < demand && demand > 0, eff = isBrownout ? (state.hasSmartGrid ? 0.90 : 0.70) : 1.00;
+
+    // Battery Logic
+    if (state.storedPower === undefined) state.storedPower = 0;
+    const batCount = state.buildings.battery.count;
+    const batCap = batCount * state.buildings.battery.capacity;
+    const rawSurplus = powerAvail - demand;
+    let actualExportMW = 0;
+
+    if (rawSurplus > 0) {
+        let rate = state.batteryChargeRate !== undefined ? state.batteryChargeRate : 1.0;
+        if (typeof rate !== 'number' || isNaN(rate)) rate = 1.0; else if (rate < 0) rate = 0; else if (rate > 1) rate = 1;
+        const potentialCharge = rawSurplus * rate;
+        const potentialExport = rawSurplus * (1 - rate);
+
+        if (batCount > 0 && state.storedPower < batCap) {
+            const space = batCap - state.storedPower;
+            const chargeAmt = Math.min(potentialCharge * dt, space);
+            state.storedPower += chargeAmt;
+            if (chargeAmt < potentialCharge * dt) actualExportMW = rawSurplus - (chargeAmt / dt);
+            else actualExportMW = potentialExport;
+
+            if (rate >= 0.99) actualExportMW = 0; // User Request: 100% Charge = 0 Export ever
+        } else {
+            actualExportMW = rawSurplus;
+            if (rate >= 0.99) actualExportMW = 0; // User Request: 100% Charge = 0 Export ever
+        }
+    } else if (rawSurplus < 0 && batCount > 0 && state.storedPower > 0) {
+        const deficit = Math.abs(rawSurplus) * dt;
+        if (state.storedPower >= deficit) {
+            state.storedPower -= deficit;
+            powerAvail = demand;
+        } else {
+            powerAvail += (state.storedPower / dt);
+            state.storedPower = 0;
+        }
+        actualExportMW = 0;
+    }
+
+    const finalSurplus = powerAvail - demand;
+    const isBrownout = finalSurplus < 0 && demand > 0;
+    const eff = isBrownout ? (state.hasSmartGrid ? 0.90 : 0.70) : 1.00;
 
     let wm = 0;
     if (powerAvail > 0) state.reactors.forEach(r => {
@@ -773,39 +1042,150 @@ function gameLoop() {
             const tierIdx = (r.heat < 25 ? 0 : r.heat < 50 ? 1 : r.heat < 75 ? 2 : 3);
             const bonusMW = (GEN_POWER_BONUS[r.gen] || [0, 0, 0, 0])[tierIdx];
             const s = ((r.baseMW + bonusMW) * pM * maintM) / powerAvail;
-
             wm += (r.heat < 1 ? 1 : GEN_TIER_MULTIPLIERS[r.gen][tierIdx]) * s;
         }
     });
 
     const cityBase = (state.buildings.house.count * 2) + (state.buildings.factory.count * 150) + (state.buildings.datacenter.count * dcRevenue) + (state.buildings.skyscraper.count * 25000);
-    const surplus = Math.max(0, powerAvail - demand);
     const currentPrice = state.market.basePrice * state.market.multiplier;
-    const exportInc = surplus * currentPrice;
-    const finalInc = (cityBase * eff * wm * rM) + (unitRevTotal * rM) + exportInc;
+    const exportInc = actualExportMW * currentPrice;
+
+    // Apply Prestige Bonuses
+    const prestigeRevMult = state.permanentBonuses ? state.permanentBonuses.revenueMultiplier : 1.0;
+    const finalInc = ((cityBase * eff * wm * rM) + (unitRevTotal * rM) + exportInc) * prestigeRevMult;
     state.cash += (finalInc * dt);
 
+    // Save derived state for Renderer
+    state.temp = {
+        powerAvail, demand, actualExportMW, currentPrice, exportInc, finalInc, isBrownout, eff, batCap, batCount
+    };
+}
+
+function renderUI() {
+    // START RENDER
+    const s = state.temp; // Derived state from updateLogic
+    if (!s) return;
+
+    // React to Master Overdrive State
+    const mB = document.getElementById('master-ovr-btn');
+    if (mB) {
+        if (!state.masterOverdriveActive && mB.classList.contains('master-ovr-active')) {
+            mB.classList.remove('master-ovr-active'); mB.innerText = "Hold for Master Overdrive";
+        }
+    }
+
+    // Update Reactors UI
+    state.reactors.forEach(r => {
+        const ui = document.querySelector('.reactor-unit[data-id="' + r.id + '"]');
+        if (!ui) return;
+
+        // Heat Bar & Text
+        const f = ui.querySelector('.u-heat-fill');
+        f.style.width = r.heat + '%';
+        f.className = 'heat-bar-fill u-heat-fill ' + getHeatFillClass(r.heat);
+
+        ui.querySelector('.u-temp-val').innerText = Math.floor(r.heat) + '%';
+
+        const tierIdx = (r.heat < 25 ? 0 : r.heat < 50 ? 1 : r.heat < 75 ? 2 : 3);
+        const zm = r.isScrammed ? 0 : (r.heat < 1 ? 1 : GEN_TIER_MULTIPLIERS[r.gen][tierIdx]);
+        ui.querySelector('.u-multiplier-val').innerText = zm.toFixed(2) + 'x';
+
+        // Scram Overlay
+        ui.classList.toggle('scram-active', r.isScrammed);
+        ui.querySelector('.u-scram-overlay').classList.toggle('hidden', !r.isScrammed);
+
+        // Unit Power/Rev (Recalculate or store in state? Recalc is cheap enough per unit)
+        // Actually we computed these in updateLogic but didn't save them per unit. 
+        // For visual accuracy we should probably store them or just approx for UI.
+        // Let's re-compute strictly for UI display to avoid bloating state.
+        const eC = state.managers.filter(m => m.type === 'engineer').length;
+        const pM = 1 + (eC * 0.25);
+        const maintM = state.hasMaintenance ? 1.5 : 1.0;
+        const bonusMW = (GEN_POWER_BONUS[r.gen] || [0, 0, 0, 0])[tierIdx];
+        const o = (r.isScrammed ? 0 : r.baseMW + bonusMW) * pM * maintM;
+        const unitRev = (GEN_BASE_GRANT[r.gen] || 5) * zm;
+
+        ui.querySelector('.u-power').innerText = Math.floor(o);
+        ui.querySelector('.u-rev').innerText = formatNum(unitRev);
+
+        // Shake
+        ui.classList.toggle('shake-light', !r.isScrammed && r.heat > 50 && r.heat <= 75);
+        ui.classList.toggle('shake-heavy', !r.isScrammed && r.heat > 75);
+
+        // Coolant Btn
+        const coolBtn = ui.querySelector('.u-coolant-btn');
+        if (coolBtn) {
+            const coolCost = getCoolantCost(r.gen);
+            const isEnabled = (state.cash >= coolCost) && (r.heat >= 1);
+            coolBtn.disabled = !isEnabled;
+            coolBtn.classList.toggle('opacity-50', !isEnabled);
+            coolBtn.classList.toggle('cursor-not-allowed', !isEnabled);
+        }
+    });
+
+    // Contract UI
+    if (state.contracts.active) {
+        const c = state.contracts.active;
+        const def = CONTRACT_TYPES.find(x => x.id === c.typeId);
+        const passed = def.check(state);
+        const bar = document.getElementById('contract-progress-bar');
+        const txt = document.getElementById('contract-status-text');
+
+        if (bar && txt) {
+            if (passed) {
+                txt.innerHTML = '<span class="text-emerald-500">CONDITION MET</span>';
+                bar.className = 'bg-emerald-500 h-full transition-all duration-300';
+            } else {
+                txt.innerHTML = '<span class="text-red-500">CONDITION FAILED</span>';
+                bar.className = 'bg-red-500 h-full transition-all duration-300';
+            }
+            const pct = (c.timeSatisfied / c.duration) * 100;
+            bar.style.width = pct + '%';
+            document.getElementById('contract-timer').innerText = (c.duration - c.timeSatisfied).toFixed(1) + 's';
+        }
+    }
+
+    // Battery UI
+    const batFill = document.getElementById('battery-fill');
+    const batText = document.getElementById('battery-text');
+    if (batFill && batText) {
+        if (s.batCap > 0) {
+            // Clamp storedPower to capacity (fixes >100% bug when capacity changes)
+            if (state.storedPower > s.batCap) state.storedPower = s.batCap;
+            const pct = Math.min(100, Math.max(0, (state.storedPower / s.batCap) * 100));
+            batFill.style.width = pct + '%';
+            batFill.className = "h-full w-0 transition-all duration-300 " + (pct < 20 ? "bg-red-500" : (pct < 50 ? "bg-yellow-500" : "bg-emerald-500"));
+            batText.innerText = Math.floor(pct) + '%';
+        } else {
+            batFill.style.width = '0%'; batText.innerText = '0%';
+        }
+    }
+
+    // Main Stats
     const cashDisplay = document.getElementById('cash-display');
     const incomeDisplay = document.getElementById('income-display');
     const exportDisplay = document.getElementById('export-display');
     const powerTotal = document.getElementById('power-total');
     const powerUsed = document.getElementById('power-used');
+
+    // Use formatNum for updates
     if (cashDisplay) cashDisplay.innerText = formatNum(state.cash);
-    if (incomeDisplay) incomeDisplay.innerText = formatNum(finalInc);
+    if (incomeDisplay) incomeDisplay.innerText = formatNum(s.finalInc);
     if (exportDisplay) {
-        exportDisplay.innerText = formatNum(exportInc);
+        exportDisplay.innerText = formatNum(s.exportInc);
         exportDisplay.className = (state.market.multiplier > 1.2 ? "text-emerald-400" : (state.market.multiplier < 0.8 ? "text-red-400" : "text-orange-400"));
     }
-    if (powerTotal) powerTotal.innerText = Math.floor(powerAvail);
-    if (powerUsed) powerUsed.innerText = Math.floor(demand);
+    if (powerTotal) powerTotal.innerText = Math.floor(s.powerAvail);
+    if (powerUsed) powerUsed.innerText = Math.floor(s.demand);
 
+    // Market UI
     const priceEl = document.getElementById('market-price');
     const arrowEl = document.getElementById('market-trend-arrow');
     if (priceEl) {
-        priceEl.innerText = '$' + currentPrice.toFixed(2);
+        priceEl.innerText = '$' + s.currentPrice.toFixed(2);
         priceEl.className = "font-bold " + (state.market.multiplier > 1.0 ? "text-emerald-400" : "text-red-400");
     }
-    if (arrowEl) {
+    if (arrowEl && state.market.trend.length >= 2) {
         const prev = state.market.trend[state.market.trend.length - 2] || 1.0;
         const isUp = state.market.multiplier > prev;
         arrowEl.innerHTML = isUp ? "▲" : "▼";
@@ -813,7 +1193,7 @@ function gameLoop() {
     }
 
     const newsEl = document.getElementById('market-news');
-    if (newsEl && state.market.news) {
+    if (newsEl && state.market.news && newsEl.innerText !== state.market.news) {
         newsEl.innerText = state.market.news;
         newsEl.className = "text-[8px] font-bold uppercase tracking-widest inline-block animate-marquee pl-48 " +
             (state.market.state === 'BULL' ? "text-emerald-400" :
@@ -823,21 +1203,28 @@ function gameLoop() {
 
     const effTag = document.getElementById('efficiency-tag');
     if (effTag) {
-        effTag.innerText = "Efficiency: " + Math.round(eff * 100) + "%";
-        effTag.className = "text-[9px] font-bold px-2 py-0.5 rounded-full inline-block mt-1 " + (isBrownout ? 'text-red-500 bg-red-950/30' : 'text-emerald-500 bg-emerald-950/30');
+        effTag.innerText = "Efficiency: " + Math.round(s.eff * 100) + "%";
+        effTag.className = "text-[9px] font-bold px-2 py-0.5 rounded-full inline-block mt-1 " + (s.isBrownout ? 'text-red-500 bg-red-950/30' : 'text-emerald-500 bg-emerald-950/30');
     }
 
     const sI = document.getElementById('stability-indicator');
     if (sI) {
-        sI.innerText = (isBrownout ? "BROWNOUT DETECTED" : "Grid Stable");
-        sI.className = "text-[10px] uppercase font-bold tracking-widest " + (isBrownout ? 'text-red-500 animate-pulse' : 'text-emerald-500');
+        sI.innerText = (s.isBrownout ? "BROWNOUT DETECTED" : "Grid Stable");
+        sI.className = "text-[10px] uppercase font-bold tracking-widest " + (s.isBrownout ? 'text-red-500 animate-pulse' : 'text-emerald-500');
     }
 
+    // Sparkline
+    if (state.market.lastTrendUpdate > (state.lastSparklineRender || 0)) {
+        renderMarketSparkline();
+        state.lastSparklineRender = Date.now();
+    }
+
+    // Upgrade Tray (Low Priority)
     if (Math.abs(state.cash - state.lastTickCash) > (state.cash * 0.05) || state.cash < 500) {
         renderUpgradeTray();
         state.lastTickCash = state.cash;
     }
-
+    // Update tray affordability classes without full rebuild
     const trayItems = document.querySelectorAll('.upgrade-tray-item');
     trayItems.forEach(el => {
         const u = UPGRADES.find(x => x.id === el.dataset.id);
@@ -849,10 +1236,13 @@ function gameLoop() {
         }
     });
 
+    // OPTIMIZED GRID RENDERING
     const gridDiv = document.getElementById('city-visual-grid');
     if (gridDiv) {
         const totalD = state.buildings.house.count + state.buildings.factory.count + state.buildings.datacenter.count + state.buildings.skyscraper.count;
-        if (gridDiv.children.length !== Math.min(state.districtSize, totalD)) {
+
+        // Only rebuild if count changed
+        if (totalD !== renderCache.lastGridCount) {
             gridDiv.innerHTML = '';
             let d = 0;
             const types = [
@@ -862,16 +1252,56 @@ function gameLoop() {
                 { c: state.buildings.house.count, cl: 'bg-emerald-500 shadow-[0_0_5px_emerald]' }
             ];
             types.forEach(type => { for (let i = 0; i < type.c && d < state.districtSize; i++) { const el = document.createElement('div'); el.className = "city-grid-item " + type.cl; gridDiv.appendChild(el); d++; } });
+
+            // Update Cache
+            renderCache.lastGridCount = totalD;
+            renderCache.gridElements = Array.from(gridDiv.children); // Cache children
         }
-        gridDiv.querySelectorAll('.city-grid-item').forEach(item => item.classList.toggle('city-grid-dim', isBrownout));
-        gridDiv.classList.toggle('brownout-flicker', isBrownout);
+
+        // Optimized Class Toggling using Cache
+        // Only update if brownout state CHANGED or we just rebuilt
+        if (s.isBrownout !== renderCache.lastBrownoutState || totalD !== renderCache.lastGridCount) {
+            renderCache.gridElements.forEach(item => item.classList.toggle('city-grid-dim', s.isBrownout));
+            gridDiv.classList.toggle('brownout-flicker', s.isBrownout);
+            renderCache.lastBrownoutState = s.isBrownout;
+        }
     }
 
     const btnBuyLand = document.getElementById('btn-buy-land');
     if (btnBuyLand) btnBuyLand.classList.toggle('not-affordable', state.cash < state.landCost);
 
-    requestAnimationFrame(gameLoop);
+    // Battery Unlock Reveal
+    const btnBat = document.getElementById('btn-battery');
+    const monBat = document.getElementById('grid-storage-monitor');
+    if (state.hasUnlockBattery) {
+        if (btnBat) btnBat.classList.remove('hidden');
+        if (monBat) monBat.classList.remove('hidden');
+    } else {
+        if (btnBat) btnBat.classList.add('hidden');
+        if (monBat) monBat.classList.add('hidden');
+    }
+
+    // Prestige Button Visibility
+    const prestigeBtn = document.getElementById('prestige-btn');
+    if (prestigeBtn) {
+        if (canPrestige()) {
+            prestigeBtn.classList.remove('hidden');
+        } else {
+            prestigeBtn.classList.add('hidden');
+        }
+    }
 }
 
 loadGame();
+setInterval(saveGame, 30000); // Auto-save every 30s
 renderReactors(); renderManagers(); refreshStaticUI(); requestAnimationFrame(gameLoop);
+
+// Set debug button text and state based on DEBUG_ENABLED
+const debugBtn = document.getElementById('btn-debug-access');
+if (debugBtn) {
+    debugBtn.innerText = DEBUG_ENABLED ? 'Debug Access' : 'Superintendent Access';
+    if (!DEBUG_ENABLED) {
+        debugBtn.disabled = true;
+        debugBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}

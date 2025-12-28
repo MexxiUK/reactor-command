@@ -63,9 +63,17 @@ body {
 }
 
 @keyframes redline-flicker {
-    0% { opacity: 1; }
-    50% { opacity: 0.8; }
-    100% { opacity: 1; }
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+
+    100% {
+        opacity: 1;
+    }
 }
 
 .building-card {
@@ -95,8 +103,15 @@ body {
 }
 
 @keyframes border-flicker {
-    0% { border-color: #ef4444; box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.2); }
-    100% { border-color: #450a0a; box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.4); }
+    0% {
+        border-color: #ef4444;
+        box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.2);
+    }
+
+    100% {
+        border-color: #450a0a;
+        box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.4);
+    }
 }
 
 .city-grid-item {
@@ -124,13 +139,33 @@ body {
 }
 
 @keyframes shake {
-    0% { transform: translate(1px, 1px) rotate(0deg); }
-    10% { transform: translate(-1px, -2px) rotate(-1deg); }
-    20% { transform: translate(-3px, 0px) rotate(1deg); }
-    30% { transform: translate(3px, 2px) rotate(0deg); }
-    40% { transform: translate(1px, -1px) rotate(1deg); }
-    50% { transform: translate(-1px, 2px) rotate(-1deg); }
-    100% { transform: translate(1px, 1px) rotate(0deg); }
+    0% {
+        transform: translate(1px, 1px) rotate(0deg);
+    }
+
+    10% {
+        transform: translate(-1px, -2px) rotate(-1deg);
+    }
+
+    20% {
+        transform: translate(-3px, 0px) rotate(1deg);
+    }
+
+    30% {
+        transform: translate(3px, 2px) rotate(0deg);
+    }
+
+    40% {
+        transform: translate(1px, -1px) rotate(1deg);
+    }
+
+    50% {
+        transform: translate(-1px, 2px) rotate(-1deg);
+    }
+
+    100% {
+        transform: translate(1px, 1px) rotate(0deg);
+    }
 }
 
 select.manager-select {
@@ -379,8 +414,13 @@ textarea.save-string {
 }
 
 @keyframes marquee {
-    0% { transform: translateX(100%); }
-    100% { transform: translateX(-100%); }
+    0% {
+        transform: translateX(100%);
+    }
+
+    100% {
+        transform: translateX(-100%);
+    }
 }
 
 .animate-marquee {
@@ -388,8 +428,15 @@ textarea.save-string {
 }
 
 @keyframes floatUp {
-    0% { transform: translateY(0) scale(1); opacity: 1; }
-    100% { transform: translateY(-40px) scale(1.2); opacity: 0; }
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-40px) scale(1.2);
+        opacity: 0;
+    }
 }
 
 .floating-text {
@@ -415,6 +462,325 @@ textarea.save-string {
 }
 
 @keyframes flash-cyan {
-    0% { background-color: #22d3ee; box-shadow: 0 0 20px #22d3ee; border-color: #fff; }
-    100% { background-color: transparent; box-shadow: none; }
+    0% {
+        background-color: #22d3ee;
+        box-shadow: 0 0 20px #22d3ee;
+        border-color: #fff;
+    }
+
+    100% {
+        background-color: transparent;
+        box-shadow: none;
+    }
+}
+
+/* ========== RESEARCH TREE STYLES ========== */
+
+.research-modal-box {
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.research-tree-wrapper {
+    position: relative;
+    width: 100%;
+    min-height: 500px;
+}
+
+.research-lines-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.research-line {
+    stroke: #374151;
+    stroke-width: 2;
+}
+
+.research-line.active {
+    stroke: #22d3ee;
+    stroke-width: 2;
+    filter: drop-shadow(0 0 4px #22d3ee);
+}
+
+.research-tree-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+}
+
+.research-node {
+    background: rgba(31, 41, 55, 0.8);
+    border: 2px solid #374151;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    cursor: default;
+    transition: all 0.2s;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.research-node.locked {
+    opacity: 0.4;
+    filter: grayscale(80%);
+}
+
+.research-node.available {
+    border-color: #6366f1;
+    cursor: pointer;
+}
+
+.research-node.available:hover {
+    border-color: #818cf8;
+    background: rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+}
+
+.research-node.affordable {
+    border-color: #22d3ee;
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+}
+
+.research-node.affordable:hover {
+    border-color: #67e8f9;
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
+}
+
+.research-node.unlocked {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.research-icon {
+    font-size: 18px;
+    margin-bottom: 4px;
+}
+
+.research-name {
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #d1d5db;
+}
+
+.research-node.unlocked .research-name {
+    color: #10b981;
+}
+
+.research-cost {
+    font-size: 9px;
+    color: #9ca3af;
+    margin-top: 4px;
+}
+
+.research-node.unlocked .research-cost {
+    color: #10b981;
+}
+
+/* ========== PRESTIGE MODAL STYLES ========== */
+
+.prestige-modal-box {
+    border-color: #ca8a04 !important;
+    box-shadow: 0 0 30px rgba(234, 179, 8, 0.2);
+}
+
+/* ========== MOBILE RESPONSIVE STYLES ========== */
+/* Portrait screens (phones) - 9:16 aspect ratio */
+
+@media (max-width: 768px) {
+    body {
+        padding: 0.5rem;
+        font-size: 14px;
+    }
+
+    /* Header adjustments */
+    header {
+        padding: 0.75rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    header h2 {
+        font-size: 1.25rem !important;
+    }
+
+    header p {
+        font-size: 7px !important;
+    }
+
+    /* Action buttons in header */
+    header .absolute.top-2.right-2 {
+        top: 0.25rem;
+        right: 0.25rem;
+    }
+
+    header .absolute.top-2.right-2 button {
+        padding: 0.125rem 0.375rem;
+        font-size: 8px;
+    }
+
+    /* Main grid - Stack columns on mobile */
+    main.grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    main .lg\\:col-span-4,
+    main .lg\\:col-span-8 {
+        grid-column: span 1 !important;
+    }
+
+    /* Building cards */
+    .building-card {
+        padding: 0.5rem;
+    }
+
+    .building-card .icon-container {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+
+    .building-card .icon-container svg {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    /* Reactor cards */
+    .reactor-card-fixed {
+        min-width: auto !important;
+        max-width: 100% !important;
+    }
+
+    #reactor-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Heat bar */
+    .heat-bar-bg {
+        height: 14px;
+    }
+
+    /* City grid - smaller tiles */
+    #city-grid {
+        max-height: 100px;
+        gap: 1px !important;
+    }
+
+    .city-grid-item {
+        width: 8px !important;
+        height: 8px !important;
+    }
+
+    /* Sparkline container */
+    .w-24.h-6 {
+        width: 3rem;
+        height: 1rem;
+    }
+
+    /* Modal adjustments */
+    .modal-box {
+        width: 95% !important;
+        max-width: none !important;
+        padding: 1rem;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+
+    .research-modal-box {
+        max-width: 100% !important;
+    }
+
+    /* Research tree on mobile */
+    .research-tree-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+
+    .research-node {
+        min-height: 60px;
+        padding: 6px;
+    }
+
+    .research-icon {
+        font-size: 14px;
+    }
+
+    .research-name {
+        font-size: 8px;
+    }
+
+    .research-cost {
+        font-size: 7px;
+    }
+
+    /* Bottom navigation */
+    .fixed.bottom-0 {
+        padding: 0.5rem;
+    }
+
+    .fixed.bottom-0 button {
+        padding: 0.375rem 0.5rem;
+        font-size: 10px;
+    }
+
+    /* Debug panel */
+    #debug-panel {
+        font-size: 10px;
+    }
+
+    #debug-panel button {
+        padding: 0.25rem 0.5rem;
+        font-size: 9px;
+    }
+
+    /* Grid Storage Monitor */
+    #grid-storage-monitor {
+        padding: 0.5rem;
+    }
+
+    /* Help button adjustment */
+    a[title="Operator Handbook"] {
+        width: 1.5rem;
+        height: 1.5rem;
+        font-size: 10px;
+    }
+}
+
+/* Extra small phones */
+@media (max-width: 380px) {
+    body {
+        padding: 0.25rem;
+    }
+
+    header h2 {
+        font-size: 1rem !important;
+    }
+
+    .research-tree-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .research-node {
+        min-height: 50px;
+    }
+}
+
+/* Landscape tablets and larger phones */
+@media (min-width: 769px) and (max-width: 1024px) {
+    #reactor-grid {
+        grid-template-columns: 1fr 1fr;
+    }
 }

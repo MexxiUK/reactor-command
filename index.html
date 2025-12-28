@@ -21,6 +21,16 @@
         <!-- HEADER STATS -->
         <header
             class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-gray-900/80 p-6 rounded-lg border border-gray-700 relative">
+
+            <!-- Action Buttons Row (Top-Right of Header) -->
+            <div class="absolute top-2 right-2 flex gap-2 z-10">
+                <button id="prestige-btn" onclick="openPrestigeModal()"
+                    class="px-2 py-1 rounded border border-yellow-600 bg-gray-900/90 text-yellow-400 hover:bg-yellow-900/30 hover:shadow-[0_0_8px_rgba(250,204,21,0.3)] text-[10px] font-bold uppercase tracking-wider transition-all hidden"
+                    title="Go Public">⭐ Prestige</button>
+                <button onclick="openResearchModal()"
+                    class="px-2 py-1 rounded border border-cyan-700 bg-gray-900/90 text-cyan-400 hover:bg-cyan-900/30 hover:shadow-[0_0_8px_rgba(34,211,238,0.3)] text-[10px] font-bold uppercase tracking-wider transition-all"
+                    title="Research Lab">🔬 Research</button>
+            </div>
             <div class="text-center md:text-left">
                 <p class="text-[9px] uppercase text-gray-500 tracking-widest">Capital Reserve</p>
                 <h2 class="text-3xl font-bold text-emerald-400">$<span id="cash-display">0</span></h2>
@@ -33,6 +43,7 @@
                     class="text-[8px] font-bold text-emerald-500 bg-emerald-950/30 px-2 py-0.5 rounded-full inline-block mt-1 uppercase tracking-widest">
                     Efficiency: 100%</div>
             </div>
+            <!-- Global Grid Load (Consolidated) -->
             <div class="text-center">
                 <div class="flex flex-col items-center">
                     <p class="text-[9px] uppercase text-gray-500 tracking-widest mb-1">Grid Market</p>
@@ -126,7 +137,8 @@
                                 <span class="text-[11px] font-bold">$<span id="cost-datacenter">1.5M</span></span>
                             </div>
                             <p class="text-[9px] text-gray-500" id="datacenter-desc"><span
-                                    id="count-datacenter">0</span> Units</p>
+                                    id="count-datacenter">0</span>
+                                Units</p>
                         </div>
                     </div>
 
@@ -144,6 +156,25 @@
                             </div>
                             <p class="text-[9px] text-gray-500" id="skyscraper-desc">1k MW | $25k/s • <span
                                     id="count-skyscraper">0</span> Units</p>
+                        </div>
+                    </div>
+
+                    <div id="btn-battery" onclick="buyBuilding('battery')"
+                        class="building-card p-3 rounded-md cursor-pointer flex items-center gap-4 transition-all hidden">
+                        <div class="icon-container text-yellow-500"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="7" width="16" height="10" rx="2" ry="2"></rect>
+                                <line x1="22" y1="11" x2="22" y2="13"></line>
+                            </svg></div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-yellow-500 text-[11px] uppercase tracking-tighter">Grid
+                                    Battery
+                                </h4>
+                                <span class="text-[11px] font-bold">$<span id="cost-battery">50k</span></span>
+                            </div>
+                            <p class="text-[9px] text-gray-500">Stores Excess Power • <span id="count-battery">0</span>
+                                Units</p>
                         </div>
                     </div>
                 </div>
@@ -165,6 +196,33 @@
                     </div>
                     <div id="city-visual-grid" class="flex flex-wrap gap-1 max-h-[160px] overflow-y-auto pr-1"></div>
                 </div>
+
+                <!-- Grid Storage Monitor (Left Column) -->
+                <div id="grid-storage-monitor" class="bg-gray-900/50 p-4 border border-gray-800 rounded-md hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Grid Storage</h4>
+                        <span class="text-[9px] font-bold text-yellow-500 font-mono" id="battery-text">0%</span>
+                    </div>
+                    <!-- Battery Charge Bar -->
+                    <div
+                        class="w-full bg-gray-800 h-2 mt-1 rounded-full overflow-hidden relative border border-gray-700">
+                        <div id="battery-fill" class="h-full bg-yellow-500 w-0 transition-all duration-300"></div>
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Charge
+                                Priority</span>
+                            <span class="text-[8px] text-emerald-400 font-mono font-bold"
+                                id="charge-rate-display">100%</span>
+                        </div>
+                        <input type="range" id="battery-slider" min="0" max="100" value="100"
+                            class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400"
+                            oninput="updateBatteryRate(this.value)">
+                    </div>
+
+                    <p class="text-[8px] text-gray-500 mt-2 text-center">Buffer Capacity: 2000 MWs / Unit</p>
+                </div>
             </div>
 
             <!-- RIGHT COLUMN -->
@@ -183,9 +241,9 @@
                     <!-- Dynamic Units and Buy card appear here -->
                 </div>
 
-                <!-- UPGRADE TRAY -->
+                <!-- UPGRADE TRAY (DEPRECATED: Replaced by Research Tree) -->
                 <div id="upgrade-tray-container"
-                    class="bg-gray-900/40 border border-gray-800 p-4 rounded-lg mt-8 shadow-inner">
+                    class="bg-gray-900/40 border border-gray-800 p-4 rounded-lg mt-8 shadow-inner hidden">
                     <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center">
                         <span class="mr-2 text-blue-500">⚙️</span> STRATEGIC UPGRADES & MODIFIERS
                     </h4>
@@ -311,7 +369,7 @@
         <button onclick="toggleDataModal()"
             class="bg-blue-900/20 border border-blue-900 text-blue-400 hover:text-blue-300 hover:border-blue-500 text-[8px] px-2 py-1 rounded uppercase tracking-widest">Data
             / Save</button>
-        <button onclick="toggleDebug()"
+        <button id="btn-debug-access" onclick="toggleDebug()"
             class="bg-red-900/20 border border-red-900 text-red-900 hover:text-red-500 hover:border-red-500 text-[8px] px-2 py-1 rounded uppercase tracking-widest">Debug
             Access</button>
     </div>
@@ -371,6 +429,47 @@
             <span class="text-[10px] text-emerald-600 font-bold" id="unit-cost-label-dynamic">$5,000</span>
         </div>
     </template>
+
+    <!-- ========== RESEARCH MODAL ========== -->
+    <div id="research-modal" class="modal-overlay">
+        <div class="modal-box research-modal-box">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-3">
+                <h2 class="text-xl font-bold text-emerald-400 uppercase tracking-widest">Research Lab</h2>
+                <button onclick="closeResearchModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <p class="text-gray-500 text-xs mb-4">Unlock technologies to advance your power empire. Click on available
+                nodes to research.</p>
+            <div class="research-tree-wrapper">
+                <svg id="research-lines" class="research-lines-svg"></svg>
+                <div id="research-tree-container" class="research-tree-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== PRESTIGE MODAL ========== -->
+    <div id="prestige-modal" class="modal-overlay">
+        <div class="modal-box prestige-modal-box">
+            <div class="flex justify-between items-center mb-4 border-b border-yellow-700 pb-3">
+                <h2 class="text-xl font-bold text-yellow-400 uppercase tracking-widest">⭐ Go Public (IPO)</h2>
+                <button onclick="closePrestigeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <p class="text-gray-300 text-sm mb-4">Reset your progress for permanent bonuses. You have reached <span
+                    class="text-emerald-400 font-bold">$1 Billion</span>!</p>
+            <div class="bg-gray-900/50 p-4 rounded-lg border border-yellow-900/50 mb-4">
+                <p class="text-yellow-400 text-lg font-bold">You will earn: <span id="prestige-points-preview"
+                        class="text-2xl">1</span> Prestige Points</p>
+                <p class="text-gray-500 text-xs mt-1">Prestige Points can be spent on permanent upgrades in the next
+                    run.</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closePrestigeModal()"
+                    class="flex-1 py-2 border border-gray-600 text-gray-400 rounded-lg hover:bg-gray-800">Cancel</button>
+                <button onclick="doPrestige()"
+                    class="flex-1 py-2 bg-yellow-600 text-black font-bold rounded-lg hover:bg-yellow-500 uppercase tracking-widest">Prestige
+                    Now</button>
+            </div>
+        </div>
+    </div>
 
     <script src="js/data.js"></script>
     <script src="js/main.js"></script>

@@ -6,7 +6,8 @@ const INITIAL_STATE = {
         house: { count: 0, baseCost: 100, demand: 1, revenue: 2 },
         factory: { count: 0, baseCost: 15000, demand: 25, revenue: 150 },
         datacenter: { count: 0, baseCost: 2000000, demand: 200, revenue: 2500 },
-        skyscraper: { count: 0, baseCost: 50000000, demand: 1000, revenue: 25000 }
+        skyscraper: { count: 0, baseCost: 50000000, demand: 1000, revenue: 25000 },
+        battery: { count: 0, baseCost: 50000, demand: 0, capacity: 100, stored: 0 }
     },
     reactors: [{ id: 1, gen: 2, heat: 0, isOverdrive: false, isScrammed: false, upgradeCost: 5000, baseMW: 150 }],
     nextUnitCost: 5000,
@@ -16,6 +17,11 @@ const INITIAL_STATE = {
     hasAI: false,
     hasLLM: false,
     hasMaintenance: false,
+    hasUnlockBattery: false,
+    hasTier1Bat: false,
+    hasTier2Bat: false,
+    hasTier3Bat: false,
+    hasTier4Bat: false,
     maxGenUnlocked: 2,
     masterOverdriveActive: false,
     ffMultiplier: 1,
@@ -32,8 +38,58 @@ const INITIAL_STATE = {
         news: "Market Stable. Grid demand normal.",
         timer: 0
     },
-    contracts: { available: [], active: null, completed: 0, reputation: 0 }
+    contracts: { available: [], active: null, completed: 0, reputation: 0 },
+    // Research Tree State
+    researchUnlocked: [],
+    // Prestige State
+    prestigeLevel: 0,
+    prestigePoints: 0,
+    permanentBonuses: {
+        revenueMultiplier: 1.0,
+        heatDissipation: 1.0,
+        startingCash: 0
+    }
 };
+
+// Research Tree Definition
+const RESEARCH_TREE = [
+    // Tier 0 - Root
+    { id: 'core_physics', name: 'Core Physics', desc: 'Foundation of reactor science. Unlocks advanced research paths.', cost: 1000, requires: [], row: 0, col: 1, effect: () => { } },
+
+    // Tier 1 - Branches
+    { id: 'thermal_eng', name: 'Thermal Engineering', desc: 'Advanced heat management techniques.', cost: 5000, requires: ['core_physics'], row: 1, col: 0, effect: (s) => { s.hasFirefighters = true; } },
+    { id: 'grid_tech', name: 'Grid Technology', desc: 'Power distribution and storage systems.', cost: 5000, requires: ['core_physics'], row: 1, col: 1, effect: (s) => { s.hasUnlockBattery = true; } },
+    { id: 'ai_systems', name: 'AI Systems', desc: 'Computational optimization for power grids.', cost: 10000, requires: ['core_physics'], row: 1, col: 2, effect: (s) => { s.hasSmartGrid = true; } },
+
+    // Tier 2 - Specializations
+    { id: 'overdrive_tech', name: 'Overdrive Protocol', desc: 'Synchronized reactor overclocking.', cost: 25000, requires: ['thermal_eng'], row: 2, col: 0, effect: (s) => { s.hasSync = true; } },
+    { id: 'battery_t1', name: 'Lithium-Ion Cells', desc: '+400 MWs battery capacity per unit.', cost: 50000, requires: ['grid_tech'], row: 2, col: 1, effect: (s) => { s.hasTier1Bat = true; s.buildings.battery.capacity += 400; } },
+    { id: 'neural_net', name: 'Neural Networks', desc: 'AI-powered datacenters. 2x profit, 3x power.', cost: 75000, requires: ['ai_systems'], row: 2, col: 2, effect: (s) => { s.hasAI = true; } },
+
+    // Tier 3 - Advanced
+    { id: 'gen3_reactor', name: 'GEN III Core Design', desc: 'Unlocks Generation 3 reactor construction.', cost: 100000, requires: ['overdrive_tech'], row: 3, col: 0, effect: (s) => { if (s.maxGenUnlocked < 3) s.maxGenUnlocked = 3; } },
+    { id: 'battery_t2', name: 'Solid State Storage', desc: '+1500 MWs battery capacity per unit.', cost: 200000, requires: ['battery_t1'], row: 3, col: 1, effect: (s) => { s.hasTier2Bat = true; s.buildings.battery.capacity += 1500; } },
+    { id: 'llm_opt', name: 'LLM Optimization', desc: 'Reduce datacenter power to 2x (400MW).', cost: 250000, requires: ['neural_net'], row: 3, col: 2, effect: (s) => { s.hasLLM = true; } },
+
+    // Tier 4 - Mastery
+    { id: 'gen4_reactor', name: 'GEN IV Core Design', desc: 'Unlocks Generation 4 reactor construction.', cost: 500000, requires: ['gen3_reactor'], row: 4, col: 0, effect: (s) => { if (s.maxGenUnlocked < 4) s.maxGenUnlocked = 4; } },
+    { id: 'battery_t3', name: 'Graphene Supercaps', desc: '+8000 MWs battery capacity per unit.', cost: 1000000, requires: ['battery_t2'], row: 4, col: 1, effect: (s) => { s.hasTier3Bat = true; s.buildings.battery.capacity += 8000; } },
+    { id: 'maintenance', name: 'Elite Maintenance', desc: '+50% reactor output.', cost: 500000, requires: ['llm_opt', 'gen3_reactor'], row: 4, col: 2, effect: (s) => { s.hasMaintenance = true; } },
+
+    // Tier 5 - Endgame
+    { id: 'fusion', name: 'Fusion Technology', desc: 'Unlocks GEN V Fusion reactors.', cost: 10000000, requires: ['gen4_reactor', 'battery_t3'], row: 5, col: 0, effect: (s) => { if (s.maxGenUnlocked < 5) s.maxGenUnlocked = 5; } },
+    { id: 'quantum_bat', name: 'Quantum Storage', desc: '+40000 MWs. Near-infinite cycle life.', cost: 50000000, requires: ['battery_t3'], row: 5, col: 1, effect: (s) => { s.hasTier4Bat = true; s.buildings.battery.capacity += 40000; } }
+];
+
+// Prestige Bonuses (Purchased with Prestige Points)
+const PRESTIGE_BONUSES = [
+    { id: 'revenue_i', name: 'Revenue Boost I', desc: '+5% base revenue permanently.', cost: 1, effect: (s) => { s.permanentBonuses.revenueMultiplier += 0.05; } },
+    { id: 'revenue_ii', name: 'Revenue Boost II', desc: '+10% base revenue permanently.', cost: 3, requires: 'revenue_i', effect: (s) => { s.permanentBonuses.revenueMultiplier += 0.10; } },
+    { id: 'heat_i', name: 'Cooling Efficiency I', desc: '+10% heat dissipation permanently.', cost: 2, effect: (s) => { s.permanentBonuses.heatDissipation += 0.10; } },
+    { id: 'heat_ii', name: 'Cooling Efficiency II', desc: '+20% heat dissipation permanently.', cost: 4, requires: 'heat_i', effect: (s) => { s.permanentBonuses.heatDissipation += 0.20; } },
+    { id: 'start_cash', name: 'Seed Capital', desc: 'Start with +$1,000 per prestige.', cost: 2, effect: (s) => { s.permanentBonuses.startingCash += 1000; } }
+];
+
 
 const MANAGER_TYPES = {
     engineer: { name: "Engineer", bonus: "+15% Power", color: "emerald", desc: "Optimizes turbines to increase total MegaWatt capacity." },
@@ -97,6 +153,46 @@ const UPGRADES = [
         getCost: () => 1500000,
         isInstalled: (s) => s.hasAI,
         canBuy: () => true
+    },
+    {
+        id: 'unlock_battery',
+        name: 'Grid Storage Tech',
+        getLabel: () => 'Research basic chemical energy storage. Unlocks Grid Battery construction.',
+        getCost: () => 50000,
+        isInstalled: (s) => s.hasUnlockBattery,
+        canBuy: () => true
+    },
+    {
+        id: 'tier1_bat',
+        name: 'Lithium-Ion Density',
+        getLabel: () => 'Advanced cathode materials increase Grid Storage density. Adds +400 MWs per unit.',
+        getCost: () => 100000,
+        isInstalled: (s) => s.hasTier1Bat,
+        canBuy: (s) => s.hasUnlockBattery
+    },
+    {
+        id: 'tier2_bat',
+        name: 'Solid State Cells',
+        getLabel: () => 'Eliminates liquid electrolyte for safer, denser storage. Adds +1,500 MWs per unit.',
+        getCost: () => 1000000,
+        isInstalled: (s) => s.hasTier2Bat,
+        canBuy: (s) => s.hasTier1Bat
+    },
+    {
+        id: 'tier3_bat',
+        name: 'Graphene Supercaps',
+        getLabel: () => 'Flash-charge capable carbon lattice storage. Adds +8,000 MWs per unit.',
+        getCost: () => 10000000,
+        isInstalled: (s) => s.hasTier3Bat,
+        canBuy: (s) => s.hasTier2Bat
+    },
+    {
+        id: 'tier4_bat',
+        name: 'Quantum Storage',
+        getLabel: () => 'Entangled state energy buffers with near-infinite cycle life. Adds +40,000 MWs per unit.',
+        getCost: () => 100000000,
+        isInstalled: (s) => s.hasTier4Bat,
+        canBuy: (s) => s.hasTier3Bat
     },
     {
         id: 'llm',
