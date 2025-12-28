@@ -951,7 +951,11 @@ function updateLogic(dt) {
         } else {
             if (!passed) c.failTimer = (c.failTimer || 0) + dt;
             else c.failTimer = 0;
-            if (c.failTimer > 2.0) { }
+
+            if (c.failTimer > 2.0) {
+                completeContract(false);
+                return;
+            }
         }
 
         if (!c.timeSatisfied) c.timeSatisfied = 0;
