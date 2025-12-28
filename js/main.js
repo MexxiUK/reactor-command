@@ -126,7 +126,17 @@ function drawResearchLines() {
     const container = document.getElementById('research-tree-container');
     if (!svg || !container) return;
 
-    svg.innerHTML = '';
+    // Define markers
+    svg.innerHTML = `
+        <defs>
+            <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" fill="#374151" />
+            </marker>
+            <marker id="arrow-active" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" fill="#22d3ee" />
+            </marker>
+        </defs>
+    `;
 
     // Ensure SVG matches container scroll dimensions
     svg.style.width = container.scrollWidth + 'px';
@@ -167,11 +177,22 @@ function drawResearchLines() {
             const x2 = childEl.offsetLeft + childEl.offsetWidth / 2;
             const y2 = childEl.offsetTop + childEl.offsetHeight / 2;
 
+            // Shorten line so arrowhead is visible
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const shorten = 35;
+            const t = Math.max(0, (len - shorten) / len);
+
+            const x2_s = x1 + dx * t;
+            const y2_s = y1 + dy * t;
+
             line.setAttribute('x1', x1);
             line.setAttribute('y1', y1);
-            line.setAttribute('x2', x2);
-            line.setAttribute('y2', y2);
+            line.setAttribute('x2', x2_s);
+            line.setAttribute('y2', y2_s);
             line.setAttribute('class', isActive ? 'research-line active' : 'research-line');
+            line.setAttribute('marker-end', `url(#${isActive ? 'arrow-active' : 'arrow-gray'})`);
             if (isActive) {
                 line.style.strokeWidth = 2; // Ensure visible
             }
