@@ -1272,7 +1272,9 @@ function updateLogic(dt) {
     // Battery Logic
     if (state.storedPower === undefined) state.storedPower = 0;
     const batCount = state.buildings.battery.count;
-    const batCap = batCount * state.buildings.battery.capacity;
+    // Safety: Ensure capacity is never 0 (minimum 100 MWs per unit)
+    const effectiveCapacity = Math.max(100, state.buildings.battery.capacity || 100);
+    const batCap = batCount * effectiveCapacity;
     const rawSurplus = powerAvail - demand;
     let actualExportMW = 0;
 
@@ -1586,6 +1588,7 @@ function renderUI() {
 }
 
 loadGame();
+recalcBatteryCapacity(); // Ensure battery capacity is always correct after load
 setInterval(saveGame, 30000); // Auto-save every 30s
 renderReactors(); renderManagers(); refreshStaticUI(); requestAnimationFrame(gameLoop);
 
