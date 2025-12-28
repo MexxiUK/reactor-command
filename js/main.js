@@ -1,5 +1,5 @@
 // ========== DEBUG CONFIGURATION ==========
-const DEBUG_ENABLED = true; // Set to true for verification
+const DEBUG_ENABLED = false; // Set to true for verification
 
 let state = JSON.parse(JSON.stringify(INITIAL_STATE));
 let lastTick = Date.now();
@@ -1278,21 +1278,6 @@ function updateLogic(dt) {
     const rawSurplus = powerAvail - demand;
     let actualExportMW = 0;
 
-    // DEBUG: Log battery state every 60 frames (~2 seconds)
-    if (!window._batDebugCounter) window._batDebugCounter = 0;
-    window._batDebugCounter++;
-    if (window._batDebugCounter % 60 === 0) {
-        console.log('[Battery Debug]', {
-            rawSurplus: rawSurplus.toFixed(1),
-            batCount,
-            batCap,
-            effectiveCapacity,
-            storedPower: state.storedPower.toFixed(1),
-            hasUnlockBattery: state.hasUnlockBattery,
-            batteryChargeRate: state.batteryChargeRate
-        });
-    }
-
     if (rawSurplus > 0) {
         let rate = state.batteryChargeRate !== undefined ? state.batteryChargeRate : 1.0;
         if (!state.hasUnlockBattery) rate = 0.0; // Force 100% Export if battery not unlocked
@@ -1443,6 +1428,14 @@ function renderUI() {
     const batMW = document.getElementById('battery-mw');
 
     if (batFill && batText) {
+        // Update battery count label
+        const batCountLabel = document.getElementById('battery-count-label');
+        if (batCountLabel) {
+            const count = s.batCount || 0;
+            batCountLabel.innerText = `(${count} ${count === 1 ? 'Battery' : 'Batteries'})`;
+            batCountLabel.className = count > 0 ? 'text-emerald-400' : 'text-red-400';
+        }
+
         if (s.batCap > 0) {
             // Clamp storedPower to capacity (fixes >100% bug when capacity changes)
             if (state.storedPower > s.batCap) state.storedPower = s.batCap;
