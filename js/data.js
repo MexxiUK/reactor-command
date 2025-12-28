@@ -60,7 +60,7 @@ const RESEARCH_TREE = [
     { id: 'core_physics', name: 'Core Physics', desc: 'Foundation of reactor science. Unlocks advanced research paths.', cost: 1000, requires: [], row: 0, col: 1, category: 'core', effect: () => { } },
 
     // Tier 1 - Branches
-    { id: 'thermal_eng', name: 'Thermal Engineering', desc: 'Advanced heat management techniques.', cost: 5000, requires: ['core_physics'], row: 1, col: 0, category: 'core', effect: (s) => { s.hasFirefighters = true; } },
+    { id: 'thermal_eng', name: 'Thermal Engineering', desc: 'Unlocks Firefighter crews to reduce SCRAM recovery time.', cost: 5000, requires: ['core_physics'], row: 1, col: 0, category: 'core', effect: (s) => { s.hasFirefighters = true; } },
     { id: 'grid_tech', name: 'Grid Technology', desc: 'Power distribution and storage systems.', cost: 5000, requires: ['core_physics'], row: 1, col: 1, category: 'storage', effect: (s) => { s.hasUnlockBattery = true; } },
     { id: 'ai_systems', name: 'AI Systems', desc: 'Computational optimization for power grids.', cost: 10000, requires: ['core_physics'], row: 1, col: 2, category: 'digital', effect: (s) => { s.hasSmartGrid = true; } },
 
