@@ -41,7 +41,7 @@ const INITIAL_STATE = {
         news: "Market Stable. Grid demand normal.",
         timer: 0
     },
-    contracts: { available: [], active: null, completed: 0, reputation: 0 },
+    contracts: { available: [], active: null, completed: 0, reputation: 0, completedContractIds: [] },
     // Research Tree State
     researchUnlocked: [],
     // Prestige State

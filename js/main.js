@@ -341,6 +341,7 @@ function loadGame() {
             // Restore deep structures if missing in save (Legacy support) or ensure fresh copy if missing
             if (!state.market) state.market = { ...freshState.market };
             if (!state.contracts) state.contracts = { ...freshState.contracts };
+            if (!state.contracts.completedContractIds) state.contracts.completedContractIds = [];
             if (!state.reactors) state.reactors = [...freshState.reactors];
 
             // Initialize Battery State if missing (v1.3.0)
@@ -825,14 +826,35 @@ function renderManagers() {
 
         const m = state.managers[i];
         if (m) {
-            const ct = MANAGER_TYPES[m.type];
+            // Hired Manager - Show Role Select
+            const now = Date.now();
+            const cooldown = m.lastRoleChange ? (120000 - (now - m.lastRoleChange)) : 0;
+            const isOnCooldown = cooldown > 0;
+
             slot.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <span class="text-[7px] font-bold text-gray-600 uppercase flex items-center">P-${i + 1} <div class="tooltip ml-1 cursor-help"><span class="text-[10px] text-gray-400 bg-gray-800 px-1 rounded-full border border-gray-700">?</span><span class="tooltiptext" id="manager-tooltip-${i}">${ct.desc}</span></div></span>
-                    <span class="text-[7px] font-bold text-emerald-500 uppercase animate-pulse">Online</span>
+                <div class="h-full flex flex-col justify-between">
+                    <div>
+                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">SLOT ${i + 1}</div>
+                        <div class="text-[11px] font-bold text-white mb-2 truncate">${m.name}</div>
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <select class="w-full bg-gray-950 border ${isOnCooldown ? 'border-gray-700 opacity-50 cursor-not-allowed' : 'border-gray-600'} text-[10px] rounded px-1 py-1 text-gray-300 focus:outline-none focus:border-emerald-500 uppercase"
+                            ${isOnCooldown ? 'disabled' : ''}
+                            onchange="const val = this.value; state.managers[${i}].type = val; state.managers[${i}].lastRoleChange = Date.now(); renderManagers(); refreshStaticUI(); scheduleSave();">
+                            ${MANAGER_TYPES.map(t => `<option value="${t.id}" ${m.type === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
+                        </select>
+                        ${isOnCooldown ? `<div class="text-[9px] text-red-400 font-bold text-center">COOLDOWN: ${(cooldown / 1000).toFixed(0)}s</div>` : ''}
+                        <div class="text-[9px] text-gray-500 leading-tight h-8 overflow-hidden">
+                            ${MANAGER_TYPES.find(t => t.id === m.type).desc}
+                        </div>
+                    </div>
+                    
+                    <button class="w-full mt-2 bg-red-900/30 border border-red-900/50 text-red-400 text-[9px] font-bold py-1 hover:bg-red-900/50 uppercase rounded-sm"
+                        onclick="if(confirm('Fire ${m.name}?')) { state.managers.splice(${i}, 1); renderManagers(); refreshStaticUI(); scheduleSave(); }">
+                        TERMINATE
+                    </button>
                 </div>
-                <div class="my-1"><select class="manager-select" onchange="updateManagerType(${m.id}, this.value)">${Object.keys(MANAGER_TYPES).map(t => `<option value="${t}" ${t === m.type ? 'selected' : ''}>${MANAGER_TYPES[t].name}</option>`).join('')}</select></div>
-                <div id="manager-bonus-${i}" class="text-[6px] text-gray-500 leading-tight uppercase font-bold tracking-tighter">${ct.bonus}</div>
             `;
         } else {
             const cost = getManagerCost(state.managers.length);
@@ -983,6 +1005,7 @@ function completeContract(success) {
     if (success) {
         state.cash += c.reward;
         state.contracts.completed++;
+        state.contracts.completedContractIds.push(c.id); // Mark as completed forever
         state.contracts.reputation += (c.difficulty === 'hard' ? 5 : 1);
 
         spawnFloatingText(rect.left + 20, rect.top, "+$" + formatNum(c.reward), "text-emerald-400");
@@ -1079,27 +1102,38 @@ function updateLogic(dt) {
         state.market.timer = duration;
     }
 
-    state.market.phase += dt * 0.5;
-    let target = 1.0;
-    if (state.market.state === 'STABLE') target = 1.0 + Math.sin(state.market.phase) * 0.2;
-    else if (state.market.state === 'BULL') target = 1.8 + Math.sin(state.market.phase * 2) * 0.4;
-    else if (state.market.state === 'BEAR') target = 0.4 + Math.sin(state.market.phase * 0.5) * 0.1;
-    else if (state.market.state === 'HIGH_VOLATILITY') {
-        state.market.phase += dt * 4;
-        target = 1.0 + Math.sin(state.market.phase) * 1.5;
-    }
+    // Value Update - 3 Second Throttle
+    const now = Date.now();
+    if (!state.market.lastValueUpdate) state.market.lastValueUpdate = now;
 
-    state.market.multiplier += (target - state.market.multiplier) * dt * (state.market.state === 'HIGH_VOLATILITY' ? 2.0 : 0.5);
-    if (state.market.multiplier < 0.05) state.market.multiplier = 0.05;
-    if (state.market.multiplier > 3.0) state.market.multiplier = 3.0;
+    if (now - state.market.lastValueUpdate >= 3000) {
+        const step = (now - state.market.lastValueUpdate) / 1000; // Seconds since last update
 
-    const now = Date.now(); // Local now for logic
-    if (!state.market.lastTrendUpdate) state.market.lastTrendUpdate = 0;
-    if (now - state.market.lastTrendUpdate > 1000) {
+        if (state.market.state === 'HIGH_VOLATILITY') {
+            state.market.phase += step * 4;
+        } else {
+            state.market.phase += step * 0.5;
+        }
+
+        let target = 1.0;
+        if (state.market.state === 'STABLE') target = 1.0 + Math.sin(state.market.phase) * 0.2;
+        else if (state.market.state === 'BULL') target = 1.8 + Math.sin(state.market.phase * 2) * 0.4;
+        else if (state.market.state === 'BEAR') target = 0.4 + Math.sin(state.market.phase * 0.5) * 0.1;
+        else if (state.market.state === 'HIGH_VOLATILITY') {
+            target = 1.0 + Math.sin(state.market.phase) * 1.5;
+        }
+
+        const alpha = Math.min(1.0, step * (state.market.state === 'HIGH_VOLATILITY' ? 2.0 : 0.5));
+        state.market.multiplier += (target - state.market.multiplier) * alpha;
+
+        if (state.market.multiplier < 0.05) state.market.multiplier = 0.05;
+        if (state.market.multiplier > 3.0) state.market.multiplier = 3.0;
+
+        // Sync Trend Update with Value Update
         state.market.trend.push(state.market.multiplier);
         if (state.market.trend.length > 24) state.market.trend.shift();
-        state.market.lastTrendUpdate = now;
-        // renderMarketSparkline called in renderUI now (via flag?) or just let renderUI handle it
+
+        state.market.lastValueUpdate = now;
     }
 
     // POWER CALCS
