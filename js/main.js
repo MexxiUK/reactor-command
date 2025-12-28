@@ -86,39 +86,66 @@ function renderResearchTree() {
 
     container.innerHTML = '';
 
-    // Create nodes
-    const nodeMap = {};
+    // Group by category
+    const categories = {
+        core: { title: 'Reactor Core', nodes: [] },
+        storage: { title: 'Grid & Storage', nodes: [] },
+        digital: { title: 'Digital Operations', nodes: [] }
+    };
+
     RESEARCH_TREE.forEach(node => {
-        const isUnlocked = state.researchUnlocked.includes(node.id);
-        const prereqsMet = node.requires.every(req => state.researchUnlocked.includes(req));
-        const canAfford = state.cash >= node.cost;
-
-        const div = document.createElement('div');
-        div.className = `research-node ${isUnlocked ? 'unlocked' : (prereqsMet ? 'available' : 'locked')} ${prereqsMet && canAfford && !isUnlocked ? 'affordable' : ''}`;
-        div.style.gridRow = node.row + 1;
-        div.style.gridColumn = node.col + 1;
-        div.dataset.id = node.id;
-        div.id = `node-${node.id}`; // Add ID for easier lookup
-
-        div.innerHTML = `
-            <div class="research-icon">${isUnlocked ? '✓' : '?'}</div>
-            <div class="research-name">${node.name}</div>
-            <div class="research-cost">${isUnlocked ? 'UNLOCKED' : '$' + formatNum(node.cost)}</div>
-        `;
-
-        div.title = node.desc;
-
-        if (!isUnlocked && prereqsMet) {
-            div.onclick = () => unlockResearch(node.id);
+        if (categories[node.category]) {
+            categories[node.category].nodes.push(node);
         }
+    });
 
-        container.appendChild(div);
-        nodeMap[node.id] = div;
+    Object.values(categories).forEach(cat => {
+        const section = document.createElement('div');
+        section.className = 'research-section';
+
+        const title = document.createElement('div');
+        title.className = 'research-section-title';
+        title.textContent = cat.title;
+        section.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'research-section-grid';
+
+        cat.nodes.forEach(node => {
+            const isUnlocked = state.researchUnlocked.includes(node.id);
+            const prereqsMet = node.requires.every(req => state.researchUnlocked.includes(req));
+            const canAfford = state.cash >= node.cost;
+
+            const div = document.createElement('div');
+            div.className = `research-node ${isUnlocked ? 'unlocked' : (prereqsMet ? 'available' : 'locked')} ${prereqsMet && canAfford && !isUnlocked ? 'affordable' : ''}`;
+            div.dataset.id = node.id;
+            div.id = `node-${node.id}`;
+
+            div.innerHTML = `
+                <div class="research-icon">${isUnlocked ? '✓' : '?'}</div>
+                <div class="research-name">${node.name}</div>
+                <div class="research-cost">${isUnlocked ? 'UNLOCKED' : '$' + formatNum(node.cost)}</div>
+            `;
+
+            div.title = node.desc;
+
+            if (!isUnlocked && prereqsMet) {
+                div.onclick = () => unlockResearch(node.id);
+            }
+
+            grid.appendChild(div);
+        });
+
+        section.appendChild(grid);
+        container.appendChild(section);
     });
 
     // Draw connector lines (SVG overlay)
-    // Defer drawing until layout is computed
-    setTimeout(drawResearchLines, 0);
+    // Disabled functionality for now as lines between sections are messy
+    // setTimeout(drawResearchLines, 0); 
+    const svg = document.getElementById('research-lines');
+    if (svg) svg.innerHTML = ''; // Clear lines
+
 }
 
 function drawResearchLines() {

@@ -775,8 +775,8 @@ textarea.save-string {
     }
 }
 
-/* Extra small phones */
-@media (max-width: 380px) {
+/* Extra small phones (under 450px) */
+@media (max-width: 450px) {
     body {
         padding: 0.25rem;
     }
@@ -785,12 +785,30 @@ textarea.save-string {
         font-size: 1rem !important;
     }
 
+    /* Make research tree scrollable horizontally on very small screens */
+    .research-tree-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 10px;
+    }
+
     .research-tree-grid {
-        grid-template-columns: repeat(2, 1fr);
+        min-width: 400px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
     }
 
     .research-node {
-        min-height: 50px;
+        min-height: 80px;
+        padding: 10px 6px;
+    }
+
+    .research-name {
+        font-size: 10px;
+    }
+
+    .research-cost {
+        font-size: 9px;
     }
 }
 
@@ -799,4 +817,121 @@ textarea.save-string {
     #reactor-grid {
         grid-template-columns: 1fr 1fr;
     }
+}
+/* Research Modal Redesign */
+
+/* Hide old grid styles if any */
+#research-tree-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 1rem;
+    overflow-y: auto;
+    position: relative; /* Context for SVG lines if we re-add them */
+}
+
+.research-section {
+    border: 1px solid #374151;
+    background: #111827;
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.research-section-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #ffd700; /* Gold/Yellow for visibility */
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #374151;
+    padding-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.research-section-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: flex-start;
+}
+
+.research-node {
+    width: 100px;
+    height: 100px;
+    background: #1f2937;
+    border: 2px solid #374151;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 4px;
+}
+
+.research-node.locked {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.research-node.available {
+    border-color: #f59e0b;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.research-node.affordable {
+    border-color: #10b981; /* Green */
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+    animation: pulse 2s infinite;
+}
+
+.research-node.unlocked {
+    border-color: #22d3ee; /* Cyan */
+    background: #0f172a;
+    box-shadow: 0 0 15px rgba(34, 211, 238, 0.3);
+}
+
+.research-icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+}
+
+.research-name {
+    font-size: 10px;
+    font-weight: bold;
+    line-height: 1.1;
+    margin-bottom: 2px;
+}
+
+.research-cost {
+    font-size: 9px;
+    color: #9ca3af;
+}
+
+.research-node:hover {
+    transform: translateY(-2px);
+    z-index: 20;
+}
+
+/* Tooltip behavior is browser native (title attribute) */
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* SVG Overlay for Lines - Currently unused but kept for structure */
+#research-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
 }
