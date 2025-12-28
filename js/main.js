@@ -87,6 +87,7 @@ function renderResearchTree() {
     container.innerHTML = '';
 
     // Create nodes
+    const nodeMap = {};
     RESEARCH_TREE.forEach(node => {
         const isUnlocked = state.researchUnlocked.includes(node.id);
         const prereqsMet = node.requires.every(req => state.researchUnlocked.includes(req));
@@ -97,6 +98,7 @@ function renderResearchTree() {
         div.style.gridRow = node.row + 1;
         div.style.gridColumn = node.col + 1;
         div.dataset.id = node.id;
+        div.id = `node-${node.id}`; // Add ID for easier lookup
 
         div.innerHTML = `
             <div class="research-icon">${isUnlocked ? '✓' : '?'}</div>
@@ -111,33 +113,79 @@ function renderResearchTree() {
         }
 
         container.appendChild(div);
+        nodeMap[node.id] = div;
     });
 
     // Draw connector lines (SVG overlay)
-    const svg = document.getElementById('research-lines');
-    if (svg) {
-        svg.innerHTML = '';
-        RESEARCH_TREE.forEach(node => {
-            node.requires.forEach(reqId => {
-                const parent = RESEARCH_TREE.find(n => n.id === reqId);
-                if (!parent) return;
-
-                const isActive = state.researchUnlocked.includes(reqId);
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-
-                // Calculate positions based on grid
-                const cellW = 140, cellH = 100, offsetX = 70, offsetY = 50;
-                line.setAttribute('x1', parent.col * cellW + offsetX);
-                line.setAttribute('y1', parent.row * cellH + offsetY + 30);
-                line.setAttribute('x2', node.col * cellW + offsetX);
-                line.setAttribute('y2', node.row * cellH + offsetY - 30);
-                line.setAttribute('class', isActive ? 'research-line active' : 'research-line');
-
-                svg.appendChild(line);
-            });
-        });
-    }
+    // Defer drawing until layout is computed
+    setTimeout(drawResearchLines, 0);
 }
+
+function drawResearchLines() {
+    const svg = document.getElementById('research-lines');
+    const container = document.getElementById('research-tree-container');
+    if (!svg || !container) return;
+
+    svg.innerHTML = '';
+
+    // Ensure SVG matches container scroll dimensions
+    svg.style.width = container.scrollWidth + 'px';
+    svg.style.height = container.scrollHeight + 'px';
+
+    RESEARCH_TREE.forEach(node => {
+        node.requires.forEach(reqId => {
+            const parentEl = document.getElementById(`node-${reqId}`);
+            const childEl = document.getElementById(`node-${node.id}`);
+
+            if (!parentEl || !childEl) return;
+
+            const isActive = state.researchUnlocked.includes(reqId);
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+
+            // Calculate centers relative to the container
+            const pRect = parentEl.getBoundingClientRect();
+            const cRect = childEl.getBoundingClientRect();
+            const contRect = container.getBoundingClientRect();
+
+            // Coordinates relative to container
+            // Use offsetLeft/Top if container is positioned relative, but getBoundingClientRect is safer for scrolling
+            // Wait, SVG is absolute inside wrapper. Wrapper is relative. 
+            // We need coordinates relative to the wrapper/container.
+
+            // Actually, simpler: Use center points offset by container position
+            // But if container scrolls, rects shift.
+            // SVG is absolute at top:0 left:0 of wrapper? Or container?
+            // HTML: Wrapper > SVG + Container.
+            // So SVG covers Wrapper. Container is sibling.
+            // If Container scrolls, SVG needs to scroll too?
+            // If Container is the grid, does it scroll? NO, Wrapper scrolls.
+            // So SVG should be large enough to cover entire ScrollWidth of Layout.
+
+            // Let's use offsetLeft + width/2
+            const x1 = parentEl.offsetLeft + parentEl.offsetWidth / 2;
+            const y1 = parentEl.offsetTop + parentEl.offsetHeight / 2;
+            const x2 = childEl.offsetLeft + childEl.offsetWidth / 2;
+            const y2 = childEl.offsetTop + childEl.offsetHeight / 2;
+
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('class', isActive ? 'research-line active' : 'research-line');
+            if (isActive) {
+                line.style.strokeWidth = 2; // Ensure visible
+            }
+
+            svg.appendChild(line);
+        });
+    });
+}
+// Listen for resize to redraw lines
+window.addEventListener('resize', () => {
+    // Debounce slightly
+    clearTimeout(window.researchResizeTimer);
+    window.researchResizeTimer = setTimeout(drawResearchLines, 100);
+});
 
 function openResearchModal() {
     const modal = document.getElementById('research-modal');
