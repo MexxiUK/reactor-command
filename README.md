@@ -1,10 +1,10 @@
-# ⚛️ Atomic Tycoon
+# ⚛️ Reactor
 
 A nuclear power plant management idle game. Build reactors, manage heat, expand your grid, and grow your energy empire.
 
 ## 🎮 Play Now
 
-[**Play Atomic Tycoon**](https://mexxiuk.github.io/atomic-tycoon/)
+[**Play Reactor**](https://reactor.davidtate.uk)
 
 ## 📖 About
 
