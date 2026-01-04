@@ -1136,8 +1136,18 @@ function updateLogic(dt) {
         if (c.typeId === 'stability') {
             if (!passed) { completeContract(false); return; }
         } else {
-            if (!passed) c.failTimer = (c.failTimer || 0) + dt;
-            else c.failTimer = 0;
+            // Initialize warmup timer for contracts that need ramp-up time
+            if (c.warmupTime === undefined) c.warmupTime = 0;
+            c.warmupTime += dt;
+
+            // Give surge contract 10s warmup before failure can trigger
+            const warmupGrace = c.typeId === 'surge' ? 10.0 : 0;
+
+            if (!passed && c.warmupTime > warmupGrace) {
+                c.failTimer = (c.failTimer || 0) + dt;
+            } else if (passed) {
+                c.failTimer = 0;
+            }
 
             if (c.failTimer > 2.0) {
                 completeContract(false);
