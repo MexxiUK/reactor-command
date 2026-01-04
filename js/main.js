@@ -1217,6 +1217,7 @@ function updateLogic(dt) {
         state.market.trend.push(state.market.multiplier);
         if (state.market.trend.length > 24) state.market.trend.shift();
 
+        state.market.lastTrendUpdate = now;
         state.market.lastValueUpdate = now;
     }
 
